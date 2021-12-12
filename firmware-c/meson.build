@@ -46,7 +46,6 @@ libopencm3 = declare_dependency(
 cargs = [
   '-Os',
   '-std=c99',
-  '-ggdb3',
   '-mcpu=' + cpu_type,
   '-mthumb',
   '-msoft-float',
@@ -71,7 +70,6 @@ linkargs = [
   '-mcpu=' + cpu_type,
   '-mthumb',
   '-msoft-float',
-  '-ggdb3',
   '-Wl,-Map=' + meson.project_name() + '.map',
   '-Wl,--cref',
   '-Wl,--gc-sections',
@@ -79,6 +77,12 @@ linkargs = [
   '-lgcc',
   '-lnosys',
 ]
+
+# Debug specific options
+if get_option('debug') == true
+  cargs += '-ggdb3'
+  linkargs += '-ggdb3'
+endif
 
 # Targets
 exe = executable(

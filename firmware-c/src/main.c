@@ -277,6 +277,22 @@ static void hid_set_config(usbd_device *dev, uint16_t wValue)
   systick_counter_enable();
 }
 
+static void gpio_setup(void) {
+  // set gpio inputs with pullup
+  gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
+          GPIO_CNF_INPUT_PULL_UPDOWN, GPIO4);
+  gpio_set(GPIOB, GPIO4);
+  gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
+          GPIO_CNF_INPUT_PULL_UPDOWN, GPIO5);
+  gpio_set(GPIOB, GPIO5);
+  gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
+          GPIO_CNF_INPUT_PULL_UPDOWN, GPIO6);
+  gpio_set(GPIOB, GPIO6);
+  gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
+          GPIO_CNF_INPUT_PULL_UPDOWN, GPIO7);
+  gpio_set(GPIOB, GPIO7);
+}
+
 static void spi_setup(void) {
 
   /* Configure GPIOs: SS=PA4, SCK=PA5, MISO=PA6 and MOSI=PA7 */
@@ -331,6 +347,7 @@ int main(void)
   /* Enable SPI1 Periph and gpio clocks */
   rcc_periph_clock_enable(RCC_SPI1);
   delay_setup();
+  gpio_setup();
   spi_setup();
 
   /*
