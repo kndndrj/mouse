@@ -22,7 +22,7 @@ includes = include_directories(
 sources = [
   'src/main.c',
   'src/delay.c',
-  'src/PMW3360.c',
+  'src/pmw3360.c',
 ]
 
 # libopencm3

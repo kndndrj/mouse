@@ -25,8 +25,8 @@
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/hid.h>
 #include <libopencm3/stm32/spi.h>
-#include <delay.h>
-#include <PMW3360.h>
+#include "delay.h"
+#include "pmw3360.h"
 
 /* Define this to include the DFU APP interface. */
 #define INCLUDE_DFU_INTERFACE
@@ -377,18 +377,18 @@ int main(void)
   usbd_register_set_config_callback(usbd_dev, hid_set_config);
 
   // start at 800 dpi
-  bool isvalid = pmw3360_begin(0x32);
+  bool isvalid = pmw3360_setup(0x32);
 
   while (1) {
     if (!isvalid) {
       gpio_toggle(GPIOB, GPIO12);
       delay_us(60000);
-      isvalid = pmw3360_begin(0x32);
+      isvalid = pmw3360_setup(0x32);
     }
     usbd_poll(usbd_dev);
 
     uint8_t buf[4] = {0, 0, 0, 0};
-    struct PMW3360_DATA motion_data = pmw3360_readBurst();
+    struct pmw3360_burst_data motion_data = pmw3360_read_burst();
 
     if (motion_data.motion && motion_data.on_surface) {
       if (motion_data.dx > 32767) {

@@ -18,7 +18,7 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include "PMW3360.h"
+#include "pmw3360.h"
 
 //================================================================================
 // PMW3360 Motion Sensor Module
@@ -30,7 +30,7 @@ begin: initalize variables, prepare the sensor to be init.
 ss_pin: The arduino pin that is connected to slave select on the module.
 CPI: initial CPI. optional.
 */
-bool pmw3360_begin(uint8_t CPI) {
+bool pmw3360_setup(uint8_t CPI) {
 
   // reset the spi bus on the sensor
   gpio_set(GPIOA, GPIO4);
@@ -39,23 +39,23 @@ bool pmw3360_begin(uint8_t CPI) {
   delay_us(100);
 
   // Reset register
-  adns_write_reg(REG_Power_Up_Reset, 0x5A);
+  pmw3360_reg_write(PMW3360_POWER_UP_RESET, 0x5A);
   // 50 ms delay
   delay_us(50000);
 
   // read registers 0x02 to 0x06 (and discard the data)
-  adns_read_reg(REG_Motion);
-  adns_read_reg(REG_Delta_X_L);
-  adns_read_reg(REG_Delta_X_H);
-  adns_read_reg(REG_Delta_Y_L);
-  adns_read_reg(REG_Delta_Y_H);
+  pmw3360_reg_read(PMW3360_MOTION);
+  pmw3360_reg_read(PMW3360_DELTA_X_L);
+  pmw3360_reg_read(PMW3360_DELTA_X_H);
+  pmw3360_reg_read(PMW3360_DELTA_Y_L);
+  pmw3360_reg_read(PMW3360_DELTA_Y_H);
 
   // upload the firmware
-  adns_upload_firmware();
+  pmw3360_firmware_upload();
 
   delay_us(100);
 
-  pmw3360_setCPI(CPI);
+  pmw3360_set_cpi(CPI);
 
   bool is_valid_signature = pmw3360_check_signature();
 
@@ -68,7 +68,7 @@ setCPI: set CPI level of the motion sensor.
 # parameter
 cpi: Count per Inch value
 */
-void pmw3360_setCPI(uint8_t cpi) { adns_write_reg(REG_Config1, cpi); }
+void pmw3360_set_cpi(uint8_t cpi) { pmw3360_reg_write(PMW3360_CONFIG_1, cpi); }
 
 /*
 getCPI: get CPI level of the motion sensor.
@@ -76,13 +76,13 @@ getCPI: get CPI level of the motion sensor.
 # retrun
 cpi: Count per Inch value
 */
-uint8_t pmw3360_getCPI(void) {
-  uint8_t cpival = adns_read_reg(REG_Config1);
+uint8_t pmw3360_get_cpi(void) {
+  uint8_t cpival = pmw3360_reg_read(PMW3360_CONFIG_1);
 
   return cpival;
 }
 
-struct PMW3360_DATA pmw3360_readBurst(void) {
+struct pmw3360_burst_data pmw3360_read_burst(void) {
   uint8_t burst_buffer[12];
 
   gpio_clear(GPIOA, GPIO4);
@@ -90,11 +90,11 @@ struct PMW3360_DATA pmw3360_readBurst(void) {
 
   delay_us(35);
   // Write any value to Motion_burst register
-  spi_send(SPI1, REG_Motion_Burst | 0x80);
+  spi_send(SPI1, PMW3360_MOTION_BURST | 0x80);
   spi_send(SPI1, 0x00);
 
   // Send Motion_burst address
-  spi_send(SPI1, REG_Motion_Burst);
+  spi_send(SPI1, PMW3360_MOTION_BURST);
 
   // tSRAD_MOTBR
   delay_us(35);
@@ -129,7 +129,7 @@ struct PMW3360_DATA pmw3360_readBurst(void) {
   uint16_t dy = dyh << 8 | dyl;
   uint16_t shutter = sh << 8 | sl;
 
-  struct PMW3360_DATA data = {
+  struct pmw3360_burst_data data = {
       .motion = motion,
       .on_surface = on_surface,
       .dx = dx,
@@ -145,9 +145,9 @@ struct PMW3360_DATA pmw3360_readBurst(void) {
 }
 
 /*
-adns_read_reg: write one byte value to the given reg_addr.
+pmw3360_reg_read: write one byte value to the given reg_addr.
 */
-uint8_t adns_read_reg(uint8_t reg_addr) {
+uint8_t pmw3360_reg_read(uint8_t reg_addr) {
 
   gpio_clear(GPIOA, GPIO4);
   delay_us(100);
@@ -171,11 +171,7 @@ uint8_t adns_read_reg(uint8_t reg_addr) {
 /*
 adns_write_reg: write one byte value to the given reg_addr
 */
-void adns_write_reg(uint8_t reg_addr, uint8_t data) {
-  // if(reg_addr != REG_Motion_Burst)
-  //{
-  //   _inBurst = false;
-  // }
+void pmw3360_reg_write(uint8_t reg_addr, uint8_t data) {
 
   gpio_clear(GPIOA, GPIO4);
   delay_us(100);
@@ -196,12 +192,12 @@ void adns_write_reg(uint8_t reg_addr, uint8_t data) {
 /*
 adns_upload_firmware: load SROM content to the motion sensor
 */
-void adns_upload_firmware(void) {
+void pmw3360_firmware_upload(void) {
   // Write 0 to Rest_En bit of Config2 register to disable Rest mode.
-  adns_write_reg(REG_Config2, 0x00);
+  pmw3360_reg_write(PMW3360_CONFIG_2, 0x00);
 
   // write 0x1d in SROM_enable reg for initializing
-  adns_write_reg(REG_SROM_Enable, 0x1d);
+  pmw3360_reg_write(PMW3360_SROM_ENABLE, 0x1d);
 
   // wait for more than one frame period
   // assume that the frame rate is as low as 100fps... even if it
@@ -209,17 +205,17 @@ void adns_upload_firmware(void) {
   delay_us(100);
 
   // write 0x18 to SROM_enable to start SROM download
-  adns_write_reg(REG_SROM_Enable, 0x18);
+  pmw3360_reg_write(PMW3360_SROM_ENABLE, 0x18);
 
   // write the SROM file (=firmware data)
   gpio_clear(GPIOA, GPIO4);
-  spi_send(SPI1, REG_SROM_Load_Burst | 0x80); // write burst destination adress
+  spi_send(SPI1, PMW3360_SROM_LOAD_BURST | 0x80);
   delay_us(15);
 
   // send all bytes of the firmware
   uint8_t c;
-  for (unsigned int i = 0; i < (sizeof(firmware_data) / sizeof(uint8_t)); i++) {
-    c = firmware_data[i];
+  for (unsigned int i = 0; i < (sizeof(firmware_tracking) / sizeof(uint8_t)); i++) {
+    c = firmware_tracking[i];
     spi_send(SPI1, c);
     delay_us(15);
     delay_us(15);
@@ -229,10 +225,9 @@ void adns_upload_firmware(void) {
   gpio_set(GPIOA, GPIO4);
   delay_us(200);
 
-
   // Write 0x00 (rest disable) to Config2 register for wired mouse or 0x20 for
   // wireless mouse design.
-  adns_write_reg(REG_Config2, 0x00);
+  pmw3360_reg_write(PMW3360_CONFIG_2, 0x00);
 }
 
 /*
@@ -242,25 +237,24 @@ return: true if the rom is loaded correctly.
 */
 bool pmw3360_check_signature(void) {
 
-  uint8_t pid = adns_read_reg(REG_Product_ID);
-  uint8_t iv_pid = adns_read_reg(REG_Inverse_Product_ID);
-  uint8_t SROM_ver = adns_read_reg(REG_SROM_ID);
+  uint8_t pid = pmw3360_reg_read(PMW3360_PRODUCT_ID);
+  uint8_t iv_pid = pmw3360_reg_read(PMW3360_INVERSE_PRODUCT_ID);
+  uint8_t SROM_ver = pmw3360_reg_read(PMW3360_SROM_ID);
 
   // signature for SROM 0x04
-  return (pid == 0x42 && iv_pid == 0xBD && SROM_ver == 0x04 );
+  return (pid == 0x42 && iv_pid == 0xBD && SROM_ver == 0x04);
 }
 
 void pmw3360_self_test(void) {
-  adns_write_reg(REG_SROM_Enable, 0x15);
+  pmw3360_reg_write(PMW3360_SROM_ENABLE, 0x15);
   delay_us(60000);
   delay_us(60000);
   delay_us(60000);
 
-  uint8_t u = adns_read_reg(REG_Data_Out_Upper); //should be 0xBE
-  uint8_t l = adns_read_reg(REG_Data_Out_Lower); //should be 0xEF
+  uint8_t u = pmw3360_reg_read(PMW3360_DATA_OUT_UPPER); // should be 0xBE
+  uint8_t l = pmw3360_reg_read(PMW3360_DATA_OUT_LOWER); // should be 0xEF
 
-  if (l+u == 0) {
+  if (l + u == 0) {
     __asm__("nop");
   }
-
 }
