@@ -319,6 +319,18 @@
     [
       "712d6a7d-2b62-464f-b745-fd2a6b0187f6",
       ""
+    ],
+    [
+      "6f190274-921a-44e7-baeb-c43d71dfb8e3",
+      "usb"
+    ],
+    [
+      "2bfe00f4-e0c8-4774-8d9e-4d480f9c91ad",
+      "sensor"
+    ],
+    [
+      "21a75d89-45eb-4d47-a378-425be42cf010",
+      "buttons"
     ]
   ],
   "text_variables": {}
