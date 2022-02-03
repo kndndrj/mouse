@@ -525,6 +525,9 @@
     (uuid e1a0b9a2-c31b-44a4-99f8-06c16c019244)
   )
 
+  (no_connect (at 82.55 107.95) (uuid 7314c2d2-48e2-4f34-b685-3af47ead6d03))
+  (no_connect (at 82.55 110.49) (uuid 7314c2d2-48e2-4f34-b685-3af47ead6d03))
+
   (wire (pts (xy 91.44 85.09) (xy 93.98 85.09))
     (stroke (width 0) (type default) (color 0 0 0 0))
     (uuid 09e9ebd2-7700-49c0-8c59-da41b8d8ac54)
@@ -739,12 +742,12 @@
   )
 
   (symbol (lib_id "Transistor_BJT:MMBT3906") (at 124.46 81.28 180) (unit 1)
-    (in_bom yes) (on_board yes) (fields_autoplaced)
+    (in_bom yes) (on_board yes)
     (uuid 335d9063-b5c8-463c-807a-07dad3d68d7b)
     (property "Reference" "Q1" (id 0) (at 119.38 80.0099 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
-    (property "Value" "MMBT3906" (id 1) (at 119.38 82.5499 0)
+    (property "Value" "MMBT3906" (id 1) (at 119.38 77.47 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Footprint" "Package_TO_SOT_SMD:SOT-23" (id 2) (at 119.38 79.375 0)
