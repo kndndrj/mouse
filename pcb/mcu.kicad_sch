@@ -1973,7 +1973,7 @@
     (property "Value" "Conn_01x06" (id 1) (at 30.48 97.79 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
-    (property "Footprint" "" (id 2) (at 40.64 105.41 0)
+    (property "Footprint" "Connector_PinSocket_2.54mm:PinSocket_1x06_P2.54mm_Vertical" (id 2) (at 40.64 105.41 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (id 3) (at 40.64 105.41 0)
