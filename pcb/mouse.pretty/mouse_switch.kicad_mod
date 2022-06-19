@@ -26,6 +26,7 @@
     (effects (font (size 1 1) (thickness 0.15)))
     (tstamp c5477e26-d331-4b07-93e3-ec00e81d1bf3)
   )
+  (fp_rect (start -2.55 -1.45) (end -1.35 1.45) (layer "F.SilkS") (width 0.12) (fill none) (tstamp 9b728953-1d6e-4101-ab17-e1adf721898e))
   (fp_rect (start -6.4 -2.9) (end 6.4 2.9) (layer "F.SilkS") (width 0.12) (fill none) (tstamp c157e952-2e6c-476b-8d03-c76674ca6e7e))
   (pad "1" thru_hole circle (at 5 0) (size 2.4 2.4) (drill 1.2) (layers *.Cu *.Mask) (tstamp d21466f6-e87f-48cb-bae9-5261b78c9ca3))
   (pad "2" thru_hole circle (at -5 0) (size 2.4 2.4) (drill 1.2) (layers *.Cu *.Mask) (tstamp 7933b653-58b8-4df9-8d1e-74f4af217143))

@@ -10,7 +10,7 @@
     (effects (font (size 1 1) (thickness 0.15)))
     (tstamp 8d56665c-0c76-4631-b64d-6fe8ce8412f7)
   )
-  (fp_text user "CUTOUT" (at 5.08 5.715 90 unlocked) (layer "F.SilkS")
+  (fp_text user "CUTOUT" (at 5.08 5.715 unlocked) (layer "F.SilkS")
     (effects (font (size 1 1) (thickness 0.15)))
     (tstamp 48ca02b2-b5f4-4c7e-8608-5d8ea0a21f0b)
   )
