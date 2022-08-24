@@ -15,7 +15,7 @@ libopencm3_libname = 'opencm3_stm32f1'
 
 # Includes
 includes = include_directories(
-  './include',
+  './inc',
 )
 
 # Sources
@@ -27,12 +27,8 @@ sources = [
 
 # libopencm3
 message('Running make for libopencm3, this might take a while...')
-libopencm3_make = run_command('make', '-C', libopencm3_path)
-if libopencm3_make.returncode() == 0
-  message('Succesfully built libopencm3')
-else
-  error('Failed to build libopencm3')
-endif
+libopencm3_make = run_command('make', '-C', libopencm3_path, check: true)
+message('Succesfully built libopencm3')
 
 libopencm3 = declare_dependency(
   link_args : [
