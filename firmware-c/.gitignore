@@ -3,3 +3,4 @@ build/
 .ccls-cache/
 .ccls
 .vscode/
+.cache/
