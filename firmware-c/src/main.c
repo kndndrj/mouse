@@ -170,35 +170,36 @@ static void hid_set_config(usbd_device *dev, uint16_t wValue) {
       dev, USB_REQ_TYPE_STANDARD | USB_REQ_TYPE_INTERFACE,
       USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT, hid_control_request);
 
-  systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
+  systick_set_clocksource(STK_CSR_CLKSOURCE_AHB);
   /* SysTick interrupt every N clock pulses: set reload to N-1 */
   systick_set_reload(99999);
   systick_interrupt_enable();
   systick_counter_enable();
 }
 
-static void gpio_setup(void) {
-  // set gpio inputs with pullup
-  gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, GPIO4);
-  gpio_set(GPIOB, GPIO4);
-  gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, GPIO5);
-  gpio_set(GPIOB, GPIO5);
-  gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, GPIO6);
-  gpio_set(GPIOB, GPIO6);
-  gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, GPIO7);
-  gpio_set(GPIOB, GPIO7);
-}
+// static void gpio_setup(void) {
+//   // set gpio inputs with pullup
+//   gpio_mode_setup(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, GPIO4);
+//   gpio_set(GPIOB, GPIO4);
+//   gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, GPIO5);
+//   gpio_set(GPIOB, GPIO5);
+//   gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, GPIO6);
+//   gpio_set(GPIOB, GPIO6);
+//   gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, GPIO7);
+//   gpio_set(GPIOB, GPIO7);
+// }
 
 static void spi_setup(void) {
 
   /* Configure GPIOs: SS=PA4, SCK=PA5, MISO=PA6 and MOSI=PA7 */
-  gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL,
-                /*GPIO4 |*/ GPIO5 | GPIO7);
+  // alternate functions for SCR, MISO, MOSI
+  gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO5 | GPIO6 | GPIO7);
+  gpio_set_af(GPIOA, GPIO_AF0, GPIO5);
+  gpio_set_af(GPIOA, GPIO_AF0, GPIO6);
+  gpio_set_af(GPIOA, GPIO_AF0, GPIO7);
 
-  gpio_set_mode(GPIOA, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, GPIO6);
-
-  // NSS pin
-  gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, GPIO4);
+  // normal output for SS pin
+  gpio_mode_setup(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO4);
 
   /* Reset SPI, SPI_CR1 register cleared, SPI is disabled */
   spi_reset(SPI1);
@@ -210,9 +211,9 @@ static void spi_setup(void) {
    * Data frame format: 8-bit
    * Frame format: MSB First
    */
-  spi_init_master(
-      SPI1, SPI_CR1_BAUDRATE_FPCLK_DIV_64, SPI_CR1_CPOL_CLK_TO_1_WHEN_IDLE,
-      SPI_CR1_CPHA_CLK_TRANSITION_2, SPI_CR1_DFF_8BIT, SPI_CR1_MSBFIRST);
+  spi_init_master(SPI1, SPI_CR1_BAUDRATE_FPCLK_DIV_64,
+                  SPI_CR1_CPOL_CLK_TO_1_WHEN_IDLE,
+                  SPI_CR1_CPHA_CLK_TRANSITION_2, SPI_CR1_MSBFIRST);
 
   /*
    * Set NSS management to software.
@@ -231,16 +232,16 @@ static void spi_setup(void) {
 }
 
 int main(void) {
-  rcc_clock_setup_pll(&rcc_hsi_configs[RCC_CLOCK_HSI_48MHZ]);
+  // clock setup
+  rcc_clock_setup_in_hsi_out_48mhz();
 
   /* Enable GPIOA clock. */
   rcc_periph_clock_enable(RCC_GPIOA);
-  rcc_periph_clock_enable(RCC_GPIOB);
 
   /* Enable SPI1 Periph and gpio clocks */
   rcc_periph_clock_enable(RCC_SPI1);
   delay_setup();
-  gpio_setup();
+  // gpio_setup();
   spi_setup();
 
   /*
@@ -252,21 +253,14 @@ int main(void) {
    * The magic delay is somewhat arbitrary, no guarantees on USBIF
    * compliance here, but "it works" in most places.
    */
-  gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL,
-                GPIO12);
+  gpio_mode_setup(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO12);
   gpio_clear(GPIOA, GPIO12);
-
-  // led pins setup
-  gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL,
-                GPIO12);
-  gpio_clear(GPIOB, GPIO12);
-
   for (unsigned i = 0; i < 800000; i++) {
     __asm__("nop");
   }
 
   usbd_dev =
-      usbd_init(&st_usbfs_v1_usb_driver, &dev_descr, &config, usb_strings, 3,
+      usbd_init(&st_usbfs_v2_usb_driver, &dev_descr, &config, usb_strings, 3,
                 usbd_control_buffer, sizeof(usbd_control_buffer));
   usbd_register_set_config_callback(usbd_dev, hid_set_config);
 

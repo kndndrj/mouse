@@ -8,10 +8,10 @@ project(
 compiler = meson.get_compiler('c')
 
 # Specific
-cpu_type = 'cortex-m3'
-cpu_define = 'STM32F1'
+cpu_type = 'cortex-m0'
+cpu_define = 'STM32F0'
 libopencm3_path = './libopencm3' # relative path
-libopencm3_libname = 'opencm3_stm32f1'
+libopencm3_libname = 'opencm3_stm32f0'
 
 # Includes
 includes = include_directories(
@@ -33,7 +33,7 @@ message('Succesfully built libopencm3')
 libopencm3 = declare_dependency(
   link_args : [
     '-L' + meson.current_source_dir() + '/' + libopencm3_path.strip('../').strip('./') + '/lib',
-    '-l' + libopencm3_libname
+    '-l' + libopencm3_libname,
   ],
   include_directories : include_directories(libopencm3_path + '/include'),
 )
