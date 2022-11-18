@@ -12,6 +12,6 @@ void delay_setup(void);
  * busy wait for a number of usecs.
  * @param us number of usecs to delay.
  */
-void delay_us(uint16_t us);
+void delay_us(uint32_t us);
 
 #endif

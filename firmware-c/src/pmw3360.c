@@ -1,4 +1,6 @@
 #include "pmw3360.h"
+#include "delay.h"
+#include "libopencm3/stm32/common/spi_common_v2.h"
 
 //================================================================================
 // PMW3360 Motion Sensor Module
@@ -10,18 +12,18 @@ begin: initalize variables, prepare the sensor to be init.
 ss_pin: The arduino pin that is connected to slave select on the module.
 CPI: initial CPI. optional.
 */
-bool pmw3360_setup(uint8_t CPI) {
+bool pmw3360_setup(uint8_t cpi) {
 
   // reset the spi bus on the sensor
   gpio_set(GPIOA, GPIO4);
-  delay_us(100);
+  delay_us(50);
   gpio_clear(GPIOA, GPIO4);
-  delay_us(100);
+  delay_us(50);
 
   // Reset register
   pmw3360_reg_write(PMW3360_POWER_UP_RESET, 0x5A);
   // 50 ms delay
-  delay_us(50000);
+  delay_us(100000);
 
   // read registers 0x02 to 0x06 (and discard the data)
   pmw3360_reg_read(PMW3360_MOTION);
@@ -33,11 +35,15 @@ bool pmw3360_setup(uint8_t CPI) {
   // upload the firmware
   pmw3360_firmware_upload();
 
+  bool is_valid_signature = pmw3360_check_signature();
+
+  // Write 0x00 (rest disable) to Config2 register for wired mouse or 0x20 for
+  // wireless mouse design.
+  pmw3360_reg_write(PMW3360_CONFIG_2, 0x00);
+
   delay_us(100);
 
-  pmw3360_set_cpi(CPI);
-
-  bool is_valid_signature = pmw3360_check_signature();
+  pmw3360_set_cpi(cpi);
 
   return is_valid_signature;
 }
@@ -132,13 +138,21 @@ uint8_t pmw3360_reg_read(uint8_t reg_addr) {
   gpio_clear(GPIOA, GPIO4);
   delay_us(100);
 
+  // empty the rx fifo (read until both flags from spi status register are cleared)
+  // TODO: remove?
+  while ((SPI1_SR & (1 << 10)) || (SPI1_SR & (1 << 9))) {
+    spi_read8(SPI1);
+  }
+
   // send adress of the register, with MSBit = 0 to indicate it's a read
-  spi_send(SPI1, reg_addr & 0x7f);
+  spi_send8(SPI1, reg_addr & 0x7f);
+  spi_read8(SPI1);
   // tSRAD
-  delay_us(100);
+  delay_us(160);
+
   // read data
-  spi_xfer(SPI1, 0x00);
-  uint8_t data = spi_read(SPI1);
+  spi_send8(SPI1, 0x10);
+  uint8_t data = spi_read8(SPI1);
 
   delay_us(100);
   gpio_set(GPIOA, GPIO4);
@@ -156,9 +170,11 @@ void pmw3360_reg_write(uint8_t reg_addr, uint8_t data) {
   gpio_clear(GPIOA, GPIO4);
   delay_us(100);
   // send adress of the register, with MSBit = 1 to indicate it's a write
-  spi_send(SPI1, reg_addr | 0x80);
+  spi_send8(SPI1, reg_addr | 0x80);
+  spi_read8(SPI1);
   // sent data
-  spi_send(SPI1, data);
+  spi_send8(SPI1, data);
+  spi_read8(SPI1);
   // tSCLK-NCS for write operation
   delay_us(35);
   delay_us(100);
@@ -179,35 +195,33 @@ void pmw3360_firmware_upload(void) {
   // write 0x1d in SROM_enable reg for initializing
   pmw3360_reg_write(PMW3360_SROM_ENABLE, 0x1d);
 
-  // wait for more than one frame period
-  // assume that the frame rate is as low as 100fps... even if it
-  // should never be that low
-  delay_us(100);
+  // wait for 10 ms
+  delay_us(10000);
 
   // write 0x18 to SROM_enable to start SROM download
   pmw3360_reg_write(PMW3360_SROM_ENABLE, 0x18);
 
-  // write the SROM file (=firmware data)
+  // lower NCS
   gpio_clear(GPIOA, GPIO4);
-  spi_send(SPI1, PMW3360_SROM_LOAD_BURST | 0x80);
+
+  // first byte is address
+  spi_send8(SPI1, PMW3360_SROM_LOAD_BURST | 0x80);
+  spi_read8(SPI1);
   delay_us(15);
 
-  // send all bytes of the firmware
+  // send the rest of the firmware
   uint8_t c;
-  for (unsigned int i = 0; i < (sizeof(firmware_tracking) / sizeof(uint8_t)); i++) {
+  for (unsigned int i = 0; i < (sizeof(firmware_tracking) / sizeof(uint8_t));
+       i++) {
     c = firmware_tracking[i];
-    spi_send(SPI1, c);
-    delay_us(15);
+    spi_send8(SPI1, c);
+    spi_read8(SPI1);
     delay_us(15);
   }
 
-  delay_us(100);
+  delay_us(2);
   gpio_set(GPIOA, GPIO4);
   delay_us(200);
-
-  // Write 0x00 (rest disable) to Config2 register for wired mouse or 0x20 for
-  // wireless mouse design.
-  pmw3360_reg_write(PMW3360_CONFIG_2, 0x00);
 }
 
 /*
@@ -217,12 +231,12 @@ return: true if the rom is loaded correctly.
 */
 bool pmw3360_check_signature(void) {
 
+  uint8_t SROM_ver = pmw3360_reg_read(PMW3360_SROM_ID);
   uint8_t pid = pmw3360_reg_read(PMW3360_PRODUCT_ID);
   uint8_t iv_pid = pmw3360_reg_read(PMW3360_INVERSE_PRODUCT_ID);
-  uint8_t SROM_ver = pmw3360_reg_read(PMW3360_SROM_ID);
 
   // signature for SROM 0x04
-  return (pid == 0x42 && iv_pid == 0xBD && SROM_ver == 0x04);
+  return (SROM_ver == 0x04 && pid == 0x42 && iv_pid == 0xBD);
 }
 
 void pmw3360_self_test(void) {

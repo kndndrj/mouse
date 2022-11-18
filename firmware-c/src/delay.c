@@ -11,7 +11,7 @@ void delay_setup(void) {
     timer_one_shot_mode(TIM2);
 }
 
-void delay_us(uint16_t us) {
+void delay_us(uint32_t us) {
     TIM_ARR(TIM2) = us;
     TIM_EGR(TIM2) = TIM_EGR_UG;
     TIM_CR1(TIM2) |= TIM_CR1_CEN;

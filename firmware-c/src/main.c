@@ -198,8 +198,12 @@ static void spi_setup(void) {
   gpio_set_af(GPIOA, GPIO_AF0, GPIO6);
   gpio_set_af(GPIOA, GPIO_AF0, GPIO7);
 
-  // normal output for SS pin
+  // normal output for SS pin and sensor reset pin
   gpio_mode_setup(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO4);
+  gpio_mode_setup(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO10);
+
+  // reset not active
+  gpio_set(GPIOA, GPIO10);
 
   /* Reset SPI, SPI_CR1 register cleared, SPI is disabled */
   spi_reset(SPI1);
@@ -208,12 +212,15 @@ static void spi_setup(void) {
    * Clock baud rate: 1/64 of peripheral clock frequency
    * Clock polarity: Idle High
    * Clock phase: Data valid on 2nd clock pulse
-   * Data frame format: 8-bit
    * Frame format: MSB First
    */
   spi_init_master(SPI1, SPI_CR1_BAUDRATE_FPCLK_DIV_64,
                   SPI_CR1_CPOL_CLK_TO_1_WHEN_IDLE,
                   SPI_CR1_CPHA_CLK_TRANSITION_2, SPI_CR1_MSBFIRST);
+
+  // Data frame size: 8-bit
+  spi_set_data_size(SPI1, SPI_CR2_DS_8BIT);
+  spi_fifo_reception_threshold_8bit(SPI1);
 
   /*
    * Set NSS management to software.
@@ -275,22 +282,22 @@ int main(void) {
     }
     usbd_poll(usbd_dev);
 
-    uint8_t buf[4] = {0, 0, 0, 0};
-    struct pmw3360_burst_data motion_data = pmw3360_read_burst();
+    // uint8_t buf[4] = {0, 0, 0, 0};
+    // struct pmw3360_burst_data motion_data = pmw3360_read_burst();
 
-    if (motion_data.motion && motion_data.on_surface) {
-      if (motion_data.dx > 32767) {
-        buf[1] = -65535 + motion_data.dx;
-      } else {
-        buf[1] = motion_data.dx;
-      }
-      if (motion_data.dy > 32767) {
-        buf[2] = -65535 + motion_data.dy;
-      } else {
-        buf[2] = motion_data.dy;
-      }
-      usbd_ep_write_packet(usbd_dev, 0x81, buf, 4);
-    }
+    // if (motion_data.motion && motion_data.on_surface) {
+    //   if (motion_data.dx > 32767) {
+    //     buf[1] = -65535 + motion_data.dx;
+    //   } else {
+    //     buf[1] = motion_data.dx;
+    //   }
+    //   if (motion_data.dy > 32767) {
+    //     buf[2] = -65535 + motion_data.dy;
+    //   } else {
+    //     buf[2] = motion_data.dy;
+    //   }
+    //   usbd_ep_write_packet(usbd_dev, 0x81, buf, 4);
+    // }
   }
 }
 
