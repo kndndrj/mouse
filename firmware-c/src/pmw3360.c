@@ -68,19 +68,15 @@ uint8_t pmw3360_get_cpi(void) {
   return cpival;
 }
 
-struct pmw3360_burst_data pmw3360_read_burst(void) {
-  uint8_t burst_buffer[12];
+pmw3360_burst_data_t pmw3360_read_burst(void) {
 
-  gpio_clear(GPIOA, GPIO4);
-  delay_us(100);
-
-  delay_us(35);
   // Write any value to Motion_burst register
-  spi_send(SPI1, PMW3360_MOTION_BURST | 0x80);
-  spi_send(SPI1, 0x00);
+  pmw3360_reg_write(PMW3360_MOTION_BURST, 0x00);
 
+  // Lower NCS
+  gpio_clear(GPIOA, GPIO4);
   // Send Motion_burst address
-  spi_send(SPI1, PMW3360_MOTION_BURST);
+  spi_send8(SPI1, PMW3360_MOTION_BURST);
 
   // tSRAD_MOTBR
   delay_us(35);
@@ -88,16 +84,18 @@ struct pmw3360_burst_data pmw3360_read_burst(void) {
   // clear the RXNE flag
   spi_read(SPI1);
 
+  uint8_t burst_buffer[12];
+
   // Read the 12 bytes of burst data
   for (uint8_t i = 0; i < 12; i++) {
-    spi_send(SPI1, 0x00);
-    burst_buffer[i] = spi_read(SPI1);
+    spi_send8(SPI1, 0x00);
+    burst_buffer[i] = spi_read8(SPI1);
   }
 
-  delay_us(120);
-
+  // Raise NCS
   gpio_set(GPIOA, GPIO4);
-  delay_us(100);
+  // tBEXIT
+  delay_us(1);
 
   bool motion = (burst_buffer[0] & 0x80) != 0;
   bool on_surface =
@@ -115,7 +113,7 @@ struct pmw3360_burst_data pmw3360_read_burst(void) {
   uint16_t dy = dyh << 8 | dyl;
   uint16_t shutter = sh << 8 | sl;
 
-  struct pmw3360_burst_data data = {
+  pmw3360_burst_data_t data = {
       .motion = motion,
       .on_surface = on_surface,
       .dx = dx,
@@ -131,7 +129,7 @@ struct pmw3360_burst_data pmw3360_read_burst(void) {
 }
 
 /*
-pmw3360_reg_read: write one byte value to the given reg_addr.
+pmw3360_reg_read: read one byte value from the given reg_addr.
 */
 uint8_t pmw3360_reg_read(uint8_t reg_addr) {
 
@@ -239,16 +237,12 @@ bool pmw3360_check_signature(void) {
   return (SROM_ver == 0x04 && pid == 0x42 && iv_pid == 0xBD);
 }
 
-void pmw3360_self_test(void) {
+bool pmw3360_self_test(void) {
   pmw3360_reg_write(PMW3360_SROM_ENABLE, 0x15);
-  delay_us(60000);
-  delay_us(60000);
-  delay_us(60000);
+  delay_us(10000);
 
   uint8_t u = pmw3360_reg_read(PMW3360_DATA_OUT_UPPER); // should be 0xBE
   uint8_t l = pmw3360_reg_read(PMW3360_DATA_OUT_LOWER); // should be 0xEF
 
-  if (l + u == 0) {
-    __asm__("nop");
-  }
+  return (u == 0xBE && l == 0xEF);
 }

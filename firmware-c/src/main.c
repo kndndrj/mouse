@@ -95,7 +95,7 @@ const struct usb_endpoint_descriptor hid_endpoint = {
     .bEndpointAddress = 0x81,
     .bmAttributes = USB_ENDPOINT_ATTR_INTERRUPT,
     .wMaxPacketSize = 4,
-    .bInterval = 0x20,
+    .bInterval = 1,
 };
 
 const struct usb_interface_descriptor hid_iface = {
@@ -251,7 +251,11 @@ int main(void) {
   // gpio_setup();
   spi_setup();
 
+  // Enable USB clock
+  rcc_periph_clock_enable(RCC_USB);
+
   /*
+   * TODO: reenumeration (could be triggered by usbd_init)
    * This is a somewhat common cheap hack to trigger device re-enumeration
    * on startup.  Assuming a fixed external pullup on D+, (For USB-FS)
    * setting the pin to output, and driving it explicitly low effectively
@@ -260,11 +264,11 @@ int main(void) {
    * The magic delay is somewhat arbitrary, no guarantees on USBIF
    * compliance here, but "it works" in most places.
    */
-  gpio_mode_setup(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO12);
-  gpio_clear(GPIOA, GPIO12);
-  for (unsigned i = 0; i < 800000; i++) {
-    __asm__("nop");
-  }
+  // gpio_mode_setup(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO12);
+  // gpio_clear(GPIOA, GPIO12);
+  // for (unsigned i = 0; i < 800000; i++) {
+  //   __asm__("nop");
+  // }
 
   usbd_dev =
       usbd_init(&st_usbfs_v2_usb_driver, &dev_descr, &config, usb_strings, 3,
@@ -282,22 +286,22 @@ int main(void) {
     }
     usbd_poll(usbd_dev);
 
-    // uint8_t buf[4] = {0, 0, 0, 0};
-    // struct pmw3360_burst_data motion_data = pmw3360_read_burst();
+    uint8_t buf[4] = {0, 0, 0, 0};
+    pmw3360_burst_data_t motion_data = pmw3360_read_burst();
 
-    // if (motion_data.motion && motion_data.on_surface) {
-    //   if (motion_data.dx > 32767) {
-    //     buf[1] = -65535 + motion_data.dx;
-    //   } else {
-    //     buf[1] = motion_data.dx;
-    //   }
-    //   if (motion_data.dy > 32767) {
-    //     buf[2] = -65535 + motion_data.dy;
-    //   } else {
-    //     buf[2] = motion_data.dy;
-    //   }
-    //   usbd_ep_write_packet(usbd_dev, 0x81, buf, 4);
-    // }
+    if (motion_data.motion && motion_data.on_surface) {
+      if (motion_data.dx > 32767) {
+        buf[1] = 65535 - motion_data.dx;
+      } else {
+        buf[1] = -motion_data.dx;
+      }
+      if (motion_data.dy > 32767) {
+        buf[2] = 65535 - motion_data.dy;
+      } else {
+        buf[2] = -motion_data.dy;
+      }
+      usbd_ep_write_packet(usbd_dev, 0x81, buf, 4);
+    }
   }
 }
 

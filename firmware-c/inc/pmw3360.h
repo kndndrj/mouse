@@ -61,7 +61,7 @@
 #define PMW3360_RAW_DATA_BURST 0x64
 #define PMW3360_LIFTCUTOFF_TUNE_2 0x65
 
-struct pmw3360_burst_data {
+typedef struct pmw3360_burst_data {
   bool motion;
   bool on_surface;
   uint16_t dx;
@@ -71,17 +71,17 @@ struct pmw3360_burst_data {
   uint8_t max_raw_data;
   uint8_t min_raw_data;
   uint16_t shutter;
-};
+} pmw3360_burst_data_t;
 
 // function prototypes
 bool pmw3360_setup(uint8_t CPI);
 void pmw3360_set_cpi(uint8_t cpi);
 uint8_t pmw3360_get_cpi(void);
-struct pmw3360_burst_data pmw3360_read_burst(void);
+pmw3360_burst_data_t pmw3360_read_burst(void);
 uint8_t pmw3360_reg_read(uint8_t reg_addr);
 void pmw3360_reg_write(uint8_t reg_addr, uint8_t data);
 void pmw3360_firmware_upload(void);
 bool pmw3360_check_signature(void);
-void pmw3360_self_test(void);
+bool pmw3360_self_test(void);
 
 #endif
