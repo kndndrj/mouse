@@ -24,5 +24,5 @@ MEMORY
 	ram (rwx) : ORIGIN = 0x20000000, LENGTH = 6K
 }
 
-/* Include the common ld script. */
+/* Include the common ld script from libopencm3 */
 INCLUDE cortex-m-generic.ld
