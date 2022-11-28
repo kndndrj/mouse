@@ -5,9 +5,9 @@ project(
   version: '0.1.0',
 )
 
-#
-# Flag presets (provided by drivers)
-#
+##
+## Flag presets (provided by HAL drivers)
+##
 # Compiler
 cargs = []
 # Linker
@@ -15,48 +15,49 @@ linkargs = []
 # Dependencies
 deps = []
 
-#
-# Drivers
-#
-# Driver is specified in crossfile
+##
+## HAL drivers
+##
+# HAL driver is specified in crossfile
 _fallback = 'none'
-driver = meson.get_external_property('driver', _fallback)
-if driver == _fallback
-  error('No driver specified!')
+hal = meson.get_external_property('hal_driver', _fallback)
+if hal == _fallback
+  error('No HAL driver specified!')
 endif
 
-driver = 'drivers/' + driver
+hal = 'hal/' + hal
 
 fs = import('fs')
-if not fs.is_dir(driver)
-  error('Driver ' + driver + ' does not exist!')
+if not fs.is_dir(hal)
+  error('HAL driver ' + hal + ' does not exist!')
 endif
 
-# Source the appropriate driver
-subdir(driver)
+# Source the appropriate hal driver
+subdir(hal)
 
-#
-# Sources
-#
-# Includes
-includes = include_directories(
-  './inc',
-)
+##
+## Drivers (external chips etc.)
+##
+subdir('drivers')
 
+
+##
+## Sources
+##
 sources = [
   'src/main.c',
-  'src/delay.c',
-  'src/pmw3360.c',
 ]
 
-# Targets
+##
+## Targets
+##
 exe = executable(
   meson.project_name(),
   sources,
   name_suffix: 'elf',
   c_args: cargs,
   link_args: linkargs,
-  include_directories : includes,
+  # include_directories : includes,
   dependencies: deps,
   build_by_default: true,
 )

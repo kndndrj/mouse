@@ -1,14 +1,8 @@
-#ifndef PMW3360_LIB
-#define PMW3360_LIB
+#ifndef DRIVER_SENSOR_PMW3360_H
+#define DRIVER_SENSOR_PMW3360_H
 
-#include "delay.h"
-#include "firmware_tracking.h"
-#include <libopencm3/stm32/gpio.h>
-#include <libopencm3/stm32/spi.h>
 #include <stdbool.h>
-#include <stddef.h>
 #include <stdint.h>
-#include <stdlib.h>
 
 // Registers
 #define PMW3360_PRODUCT_ID 0x00
@@ -74,14 +68,16 @@ typedef struct pmw3360_burst_data {
 } pmw3360_burst_data_t;
 
 // function prototypes
-bool pmw3360_setup(uint8_t CPI);
-void pmw3360_set_cpi(uint8_t cpi);
-uint8_t pmw3360_get_cpi(void);
-pmw3360_burst_data_t pmw3360_read_burst(void);
-uint8_t pmw3360_reg_read(uint8_t reg_addr);
-void pmw3360_reg_write(uint8_t reg_addr, uint8_t data);
-void pmw3360_firmware_upload(void);
-bool pmw3360_check_signature(void);
-bool pmw3360_self_test(void);
+bool PMW3360_init(uint8_t CPI);
+
+void PMW3360_set_cpi(uint8_t cpi);
+
+uint8_t PMW3360_get_cpi(void);
+
+pmw3360_burst_data_t PMW3360_read_burst(void);
+
+bool PMW3360_check_signature(void);
+
+bool PMW3360_self_test(void);
 
 #endif

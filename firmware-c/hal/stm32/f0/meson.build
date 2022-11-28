@@ -1,4 +1,3 @@
-
 # Presets
 libopencm3_path = '../../../libopencm3'
 libopencm3_libname = 'opencm3_stm32f0'
@@ -19,7 +18,16 @@ libopencm3 = declare_dependency(
   include_directories : include_directories(libopencm3_path + '/include'),
 )
 
-deps += libopencm3
+dep = declare_dependency(
+  include_directories: include_directories('../../'),
+  sources: [
+    'spi.c',
+    'usb.c',
+    'delay.c',
+  ],
+)
+
+deps += [libopencm3, dep]
 
 # Compiler
 cargs += [
