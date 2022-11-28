@@ -13,6 +13,8 @@ void SPI_init(void) {
     return;
   }
 
+  // TODO: not gpioA specific
+  rcc_periph_clock_enable(RCC_GPIOA);
   rcc_periph_clock_enable(RCC_SPI1);
 
   // alternate functions for SCR, MISO, MOSI

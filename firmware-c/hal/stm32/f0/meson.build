@@ -19,11 +19,15 @@ libopencm3 = declare_dependency(
 )
 
 dep = declare_dependency(
-  include_directories: include_directories('../../'),
+  include_directories: [
+    include_directories('../../'),
+    include_directories('include'),
+    ],
   sources: [
     'spi.c',
     'usb.c',
     'delay.c',
+    'gpio.c',
   ],
 )
 

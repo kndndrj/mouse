@@ -182,6 +182,8 @@ void USB_init(void) {
     return;
   }
 
+  // TODO: explicitly define usb pins?
+  rcc_periph_clock_enable(RCC_GPIOA);
   rcc_periph_clock_enable(RCC_USB);
 
   // TODO: make descriptors modular
