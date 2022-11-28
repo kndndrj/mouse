@@ -1,4 +1,3 @@
-#include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/rcc.h>
 
 #include "drivers/sensors/pmw3360.h"
@@ -15,21 +14,18 @@ int main(void) {
 
   DELAY_init();
 
-  SPI_init();
-
   USB_init();
 
-  // sensor reset not active
-  GPIO_init(IO_A10, GPIO_MODE_OUTPUT_PUSHPULL);
-  GPIO_set(IO_A10);
-
+  // status LED
+  GPIO_init(IO_A8, GPIO_MODE_OUTPUT_PUSHPULL);
+  GPIO_clear(IO_A8);
 
   // start at 800 dpi
   bool isvalid = PMW3360_init(0x32);
 
   while (1) {
     if (!isvalid) {
-      gpio_toggle(GPIOB, GPIO12);
+      GPIO_toggle(IO_A8);
       DELAY_us(60000);
       isvalid = PMW3360_init(0x32);
     }

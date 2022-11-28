@@ -1,6 +1,7 @@
 #include "pmw3360.h"
 
 #include "hal/delay.h"
+#include "hal/gpio.h"
 #include "hal/spi.h"
 #include "pmw3360_fw_tracking.h"
 
@@ -89,6 +90,10 @@ bool PMW3360_init(uint8_t cpi) {
   // set up needed hal drivers
   SPI_init();
   DELAY_init();
+
+  // sensor reset not active
+  GPIO_init(IO_A10, GPIO_MODE_OUTPUT_PUSHPULL);
+  GPIO_set(IO_A10);
 
   // reset the spi bus on the sensor
   SPI_cs_set();

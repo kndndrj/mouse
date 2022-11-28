@@ -26,4 +26,6 @@ void GPIO_set(io_t pin) { gpio_set(PORT(pin), PIN(pin)); }
 
 void GPIO_clear(io_t pin) { gpio_clear(PORT(pin), PIN(pin)); }
 
+void GPIO_toggle(io_t pin) { gpio_toggle(PORT(pin), PIN(pin)); }
+
 bool GPIO_status(io_t pin) { return (bool)gpio_get(PORT(pin), PIN(pin)); }

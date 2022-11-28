@@ -19,6 +19,8 @@ void GPIO_set(io_t pin);
 
 void GPIO_clear(io_t pin);
 
+void GPIO_toggle(io_t pin);
+
 bool GPIO_status(io_t pin);
 
 #endif
