@@ -15,6 +15,9 @@ void GPIO_init(io_t pin, gpio_mode_t mode) {
     case GPIO_MODE_INPUT_PULLUP:
       gpio_mode_setup(PORT(pin), GPIO_MODE_INPUT, GPIO_PUPD_PULLUP, PIN(pin));
       break;
+    case GPIO_MODE_INPUT_NONE:
+      gpio_mode_setup(PORT(pin), GPIO_MODE_INPUT, GPIO_PUPD_NONE, PIN(pin));
+      break;
     case GPIO_MODE_OUTPUT_PUSHPULL:
     case GPIO_MODE_OUTPUT_OPENDRAIN:
       gpio_mode_setup(PORT(pin), GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, PIN(pin));
