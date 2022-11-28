@@ -1,5 +1,5 @@
 # Presets
-libopencm3_path = '../../../libopencm3'
+libopencm3_path = '../../../external/libopencm3'
 libopencm3_libname = 'opencm3_stm32f0'
 libopencm3_cpu = 'STM32F0'
 cpu = host_machine.cpu() == 'cortex-m0+' ? 'cortex-m0plus' : host_machine.cpu()
