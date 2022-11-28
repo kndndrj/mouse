@@ -1,7 +1,6 @@
 #ifndef HAL_USB_H
 #define HAL_USB_H
 
-
 //
 // Functions
 //
