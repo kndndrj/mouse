@@ -1,5 +1,6 @@
 #include "encoder.h"
 
+#include "hal/delay.h"
 #include "hal/gpio.h"
 
 void ENCODER_init(io_t channel_a, io_t channel_b) {
@@ -9,7 +10,7 @@ void ENCODER_init(io_t channel_a, io_t channel_b) {
 }
 
 encoder_state_t ENCODER_read(io_t channel_a, io_t channel_b) {
-  static int8_t prev = 0;
+  static int8_t prev = 0x00;
 
   // read current state
   uint8_t current = 0x00;
@@ -31,6 +32,7 @@ encoder_state_t ENCODER_read(io_t channel_a, io_t channel_b) {
 
   uint8_t state = (prev << 2) | current;
   // determine direction based on state
+  // We only care about leading edges -> cw: a, c   ccw: d, b
   // prev_a\ /prev_b
   //       ||
   //       vv
@@ -50,16 +52,19 @@ encoder_state_t ENCODER_read(io_t channel_a, io_t channel_b) {
   //           :  :  :  :  :  :  :  :  :  :  :  :
   // event     a  b  c  d  a  b  c  d  a  b  c  d
 
+  // Debounce delay 1ms
+  DELAY_us(1000);
+
+  prev = current;
+
   switch (state) {
-    case 0b0010:
-    case 0b1011:
-    case 0b1101:
-    case 0b0100:
+    // cw
+    case 0b0010: // a
+    case 0b1101: // c
       return ENCODER_CLOCKWISE;
-    case 0b0001:
-    case 0b0111:
-    case 0b1110:
-    case 0b1000:
+    // ccw
+    case 0b0001: // d
+    case 0b1110: // b
       return ENCODER_COUNTER_CLOCKWISE;
   }
 

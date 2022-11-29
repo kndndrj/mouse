@@ -1,6 +1,7 @@
 #include <libopencm3/stm32/rcc.h>
 
 #include "drivers/button.h"
+#include "drivers/encoder.h"
 #include "drivers/sensors/pmw3360.h"
 #include "hal/delay.h"
 #include "hal/gpio.h"
@@ -15,6 +16,8 @@ int main(void) {
   DELAY_init();
 
   USB_init();
+
+  ENCODER_init(IO_B6, IO_B7);
 
   // status LED
   GPIO_init(IO_A8, GPIO_MODE_OUTPUT_PUSHPULL);
@@ -35,10 +38,9 @@ int main(void) {
     }
     USB_poll();
 
-
     uint8_t buf[4] = {0, 0, 0, 0};
-    pmw3360_burst_data_t motion_data = PMW3360_read_burst();
 
+    // Buttons
     bool button_left = BUTTON_read(IO_A0);
     bool button_right = BUTTON_read(IO_A1);
     bool button_middle = BUTTON_read(IO_A2);
@@ -52,6 +54,18 @@ int main(void) {
     if (!button_middle) {
       buf[0] |= 1 << 2;
     }
+
+    // Wheel
+    encoder_state_t encoder = ENCODER_read(IO_B6, IO_B7);
+
+    if (encoder == ENCODER_CLOCKWISE) {
+      buf[3] = (uint8_t)1;
+    } else if (encoder == ENCODER_COUNTER_CLOCKWISE) {
+      buf[3] = (uint8_t)-1;
+    }
+
+    // Sensor
+    pmw3360_burst_data_t motion_data = PMW3360_read_burst();
 
     if (motion_data.motion && motion_data.on_surface) {
       if (motion_data.dx > 32767) {
