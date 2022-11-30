@@ -6,8 +6,6 @@
 
 #include "pins.h"
 
-// TODO: better pin name macros e.g. PA4
-
 //
 // Pin definitions
 //

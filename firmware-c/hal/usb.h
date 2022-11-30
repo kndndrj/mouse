@@ -1,14 +1,16 @@
 #ifndef HAL_USB_H
 #define HAL_USB_H
 
+typedef void *usb_driver_t;
+
 //
 // Functions
 //
 
-void USB_init(void);
+usb_driver_t USB_init(void);
 
-void USB_poll(void);
+void USB_poll(usb_driver_t driver);
 
-void USB_write_packet(const void *buf);
+void USB_write_packet(usb_driver_t driver, const void *buf);
 
 #endif

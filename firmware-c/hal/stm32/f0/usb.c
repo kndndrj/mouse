@@ -142,12 +142,6 @@ const char *usb_strings[] = {
 // USB device
 //
 
-// usb device
-static usbd_device *usbd_dev;
-
-// Buffer to be used for control requests.
-uint8_t usbd_control_buffer[128];
-
 static enum usbd_request_return_codes hid_control_request(
     usbd_device *dev, struct usb_setup_data *req, uint8_t **buf, uint16_t *len,
     void (**complete)(usbd_device *, struct usb_setup_data *)) {
@@ -176,11 +170,16 @@ static void hid_set_config(usbd_device *dev, uint16_t wValue) {
       USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT, hid_control_request);
 }
 
-void USB_init(void) {
+usb_driver_t USB_init(void) {
+  // usb device
+  static usbd_device *usbd_dev;
   static bool initialised = false;
   if (initialised) {
-    return;
+    return usbd_dev;
   }
+
+  // Buffer to be used for control requests.
+  static uint8_t usbd_control_buffer[128];
 
   // TODO: explicitly define usb pins?
   rcc_periph_clock_enable(RCC_GPIOA);
@@ -196,11 +195,13 @@ void USB_init(void) {
   // Reenumeraion done automatically for f0 chips
 
   initialised = true;
+
+  return usbd_dev;
 }
 
-void USB_poll(void) { usbd_poll(usbd_dev); }
+void USB_poll(usb_driver_t driver) { usbd_poll(driver); }
 
 // TODO: make buf modular
-void USB_write_packet(const void *buf) {
-  usbd_ep_write_packet(usbd_dev, 0x81, buf, 4);
+void USB_write_packet(usb_driver_t driver, const void *buf) {
+  usbd_ep_write_packet(driver, 0x81, buf, 4);
 }

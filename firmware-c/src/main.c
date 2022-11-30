@@ -15,7 +15,7 @@ int main(void) {
 
   DELAY_init();
 
-  USB_init();
+  usb_driver_t usb_driver = USB_init();
 
   ENCODER_init(IO_B6, IO_B7);
 
@@ -36,7 +36,7 @@ int main(void) {
       DELAY_us(60000);
       isvalid = PMW3360_init(0x32);
     }
-    USB_poll();
+    USB_poll(usb_driver);
 
     uint8_t buf[4] = {0, 0, 0, 0};
 
@@ -80,6 +80,6 @@ int main(void) {
       }
     }
 
-    USB_write_packet(buf);
+    USB_write_packet(usb_driver, buf);
   }
 }
