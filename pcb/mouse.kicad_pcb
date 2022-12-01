@@ -221,6 +221,11 @@
       (net 2 "GND") (pinfunction "B") (pintype "passive") (tstamp ae11e17b-4c47-4155-a1ae-9e843990b478))
     (pad "3" thru_hole circle locked (at 0 0) (size 2.4 2.4) (drill 1.2) (layers *.Cu *.Mask)
       (net 15 "Net-(D2-Pad2)") (pinfunction "C") (pintype "passive") (tstamp 5ffeb52d-714d-47e2-a6a9-d7123a24abab))
+    (model "${KIPRJMOD}/3d/switch_d2fc-f-7n.wrl"
+      (offset (xyz 6.36 -2.9 0.5))
+      (scale (xyz 1 1 1))
+      (rotate (xyz 0 0 -90))
+    )
   )
 
   (footprint "Resistor_SMD:R_0603_1608Metric" (layer "F.Cu")
@@ -360,6 +365,11 @@
       (net 2 "GND") (pinfunction "B") (pintype "passive") (tstamp 683edb24-e196-4728-9cd3-102d110e8ffc))
     (pad "3" thru_hole circle locked (at 0 0 270) (size 2.4 2.4) (drill 1.2) (layers *.Cu *.Mask)
       (net 18 "Net-(D5-Pad2)") (pinfunction "C") (pintype "passive") (tstamp 3c23f094-3ba7-4122-891b-96d24708e8f0))
+    (model "${KIPRJMOD}/3d/switch_d2fc-f-7n.wrl"
+      (offset (xyz 6.35 -2.9 0.5))
+      (scale (xyz 1 1 1))
+      (rotate (xyz 0 0 -90))
+    )
   )
 
   (footprint "Diode_SMD:D_SOD-123F" (layer "F.Cu")
@@ -452,6 +462,11 @@
       (net 2 "GND") (pinfunction "B") (pintype "passive") (tstamp 2e762e08-5e2a-4b45-bbef-08f4170b135e))
     (pad "3" thru_hole circle locked (at 0 0) (size 2.4 2.4) (drill 1.2) (layers *.Cu *.Mask)
       (net 16 "Net-(D3-Pad2)") (pinfunction "C") (pintype "passive") (tstamp b99a1e34-cc60-4e8e-8bba-d6991ce96883))
+    (model "${KIPRJMOD}/3d/switch_d2fc-f-7n.wrl"
+      (offset (xyz 6.35 -2.9 0.5))
+      (scale (xyz 1 1 1))
+      (rotate (xyz 0 0 -90))
+    )
   )
 
   (footprint "Capacitor_SMD:C_0603_1608Metric" (layer "F.Cu")
@@ -2152,6 +2167,11 @@
       (net 20 "Net-(D7-Pad2)") (pinfunction "B") (pintype "passive") (tstamp b615e343-e56c-4885-9c31-49d028070c58))
     (pad "C" thru_hole circle (at 2.5 0 180) (size 2 2) (drill 1) (layers *.Cu *.Mask)
       (net 2 "GND") (pinfunction "C") (pintype "passive") (tstamp 64d99790-6af5-42f8-988e-dde01d5fc9d5))
+    (model "${KIPRJMOD}/3d/encoder_ec10_9mm.wrl"
+      (offset (xyz 0 -0.4 9))
+      (scale (xyz 1 1 1))
+      (rotate (xyz -90 0 180))
+    )
   )
 
   (footprint "Diode_SMD:D_SOD-123F" (layer "F.Cu")
@@ -3369,6 +3389,11 @@
       (net 2 "GND") (pinfunction "B") (pintype "passive") (tstamp a2510ba7-0884-4ac4-b40a-3557354c7530))
     (pad "3" thru_hole circle locked (at 0 0) (size 2.4 2.4) (drill 1.2) (layers *.Cu *.Mask)
       (net 17 "Net-(D4-Pad2)") (pinfunction "C") (pintype "passive") (tstamp 466d1ad8-0342-4fc3-a8cb-473ff0dd242e))
+    (model "${KIPRJMOD}/3d/switch_d2fc-f-7n.wrl"
+      (offset (xyz 6.35 -2.9 0.5))
+      (scale (xyz 1 1 1))
+      (rotate (xyz 0 0 -90))
+    )
   )
 
   (footprint "Resistor_SMD:R_0603_1608Metric" (layer "F.Cu")
