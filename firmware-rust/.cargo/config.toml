@@ -1,7 +1,7 @@
 [build]
 # Instruction set of Cortex-M0
 
-target = "thumbv7m-none-eabi"
+target = "thumbv6m-none-eabi"
 
 rustflags = [
   # use the Tlink.x script from the cortex-m-rt crate

@@ -183,57 +183,32 @@ pub mod hid {
 
 extern crate panic_semihosting;
 
-use cortex_m::asm::delay;
-use embedded_hal::digital::v2::OutputPin;
-use stm32f1xx_hal::usb::{Peripheral, UsbBus, UsbBusType};
-use stm32f1xx_hal::{gpio, pac, prelude::*};
+use stm32f0xx_hal::usb::{Peripheral, UsbBus, UsbBusType};
+use stm32f0xx_hal::{pac, prelude::*};
 
-use usb_device::bus;
-use usb_device::prelude::*;
+use usb_device::{bus, prelude::*};
 
 use cortex_m_rt::entry;
 
 use hid::HIDClass;
 
-type LED = gpio::gpioc::PC13<gpio::Output<gpio::PushPull>>;
-
-
 #[entry]
 fn main() -> ! {
-    struct Resources {
-        counter: u8,
-        led: LED,
+    let mut p = pac::Peripherals::take().unwrap();
 
-        usb_dev: UsbDevice<'static, UsbBusType>,
-        hid: HIDClass<'static, UsbBusType>,
-    }
-
-    let p = pac::Peripherals::take().unwrap();
-    let mut flash = p.FLASH.constrain();
-    let mut rcc = p.RCC.constrain();
-
-    let mut gpioc = p.GPIOC.split(&mut rcc.apb2);
-    let led = gpioc.pc13.into_push_pull_output(&mut gpioc.crh);
-
-    let clocks = rcc
-        .cfgr
-        .use_hse(8.mhz())
+    let mut rcc = p
+        .RCC
+        .configure()
+        .hsi48()
+        .enable_crs(p.CRS)
         .sysclk(48.mhz())
-        .pclk1(24.mhz())
-        .freeze(&mut flash.acr);
+        .pclk(24.mhz())
+        .freeze(&mut p.FLASH);
 
-    assert!(clocks.usbclk_valid());
-
-    let mut gpioa = p.GPIOA.split(&mut rcc.apb2);
-
-    // BluePill board has a pull-up resistor on the D+ line.
-    // Pull the D+ pin down to send a RESET condition to the USB bus.
-    let mut usb_dp = gpioa.pa12.into_push_pull_output(&mut gpioa.crh);
-    usb_dp.set_low().ok();
-    delay(clocks.sysclk().0 / 100);
+    let gpioa = p.GPIOA.split(&mut rcc);
 
     let usb_dm = gpioa.pa11;
-    let usb_dp = usb_dp.into_floating_input(&mut gpioa.crh);
+    let usb_dp = gpioa.pa12;
 
     let usb = Peripheral {
         usb: p.USB,
@@ -243,8 +218,8 @@ fn main() -> ! {
 
     static mut USB_BUS: Option<bus::UsbBusAllocator<UsbBusType>> = None;
 
-    let usb_dev;
-    let hid;
+    let mut usb_dev;
+    let mut hid;
 
     unsafe {
         USB_BUS = Some(UsbBus::new(usb));
@@ -259,56 +234,18 @@ fn main() -> ! {
             .build();
     }
 
-    let mut resources = Resources {
-        counter: 0,
-        led,
-
-        usb_dev,
-        hid,
-    };
-
     loop {
-        // task1
-        let counter: &mut u8 = &mut resources.counter;
-        let led = &mut resources.led;
-        let hid = &mut resources.hid;
-
-        const P: u8 = 2;
-        *counter = (*counter + 1) % P;
-
-        // move mouse cursor horizontally (x-axis) while blinking LED
-        if *counter < P / 2 {
-            led.set_high().ok();
-            hid.write(&hid::report(10, 0));
-        } else {
-            led.set_low().ok();
-            hid.write(&hid::report(-10, 0));
-        }
+        hid.write(&hid::report(10, 0));
 
         // task_usb_tx
-        usb_poll(
-            &mut resources.counter,
-            &mut resources.led,
-            &mut resources.usb_dev,
-            &mut resources.hid,
-        );
+        usb_poll(&mut usb_dev, &mut hid);
 
         // task_usb_rx
-        usb_poll(
-            &mut resources.counter,
-            &mut resources.led,
-            &mut resources.usb_dev,
-            &mut resources.hid,
-        );
+        usb_poll(&mut usb_dev, &mut hid);
     }
 }
 
-fn usb_poll<B: bus::UsbBus>(
-    _counter: &mut u8,
-    _led: &mut LED,
-    usb_dev: &mut UsbDevice<'static, B>,
-    hid: &mut HIDClass<'static, B>,
-) {
+fn usb_poll<B: bus::UsbBus>(usb_dev: &mut UsbDevice<'static, B>, hid: &mut HIDClass<'static, B>) {
     if !usb_dev.poll(&mut [hid]) {
         return;
     }
