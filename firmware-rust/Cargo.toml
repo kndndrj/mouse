@@ -13,9 +13,7 @@ panic-semihosting = "0.5"
 panic-halt = "0.2.0"
 usb-device = "0.2.4"
 usbd-serial = "0.1"
-usbd-webusb = "1.0.0"
 embedded-hal = "0.2.3"
-cortex-m-rtfm = "0.5"
 
 # this lets you use `cargo fix`!
 [[bin]]

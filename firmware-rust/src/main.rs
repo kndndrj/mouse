@@ -183,22 +183,23 @@ pub mod hid {
 
 extern crate panic_semihosting;
 
-use cortex_m::{asm::delay, peripheral::DWT};
+use cortex_m::asm::delay;
 use embedded_hal::digital::v2::OutputPin;
-use rtfm::cyccnt::{Instant, U32Ext as _};
 use stm32f1xx_hal::usb::{Peripheral, UsbBus, UsbBusType};
-use stm32f1xx_hal::{gpio, prelude::*};
+use stm32f1xx_hal::{gpio, pac, prelude::*};
+
 use usb_device::bus;
 use usb_device::prelude::*;
+
+use cortex_m_rt::entry;
 
 use hid::HIDClass;
 
 type LED = gpio::gpioc::PC13<gpio::Output<gpio::PushPull>>;
 
-const PERIOD: u32 = 8_000_000;
 
-#[rtfm::app(device = stm32f1xx_hal::stm32, peripherals = true, monotonic = rtfm::cyccnt::CYCCNT)]
-const APP: () = {
+#[entry]
+fn main() -> ! {
     struct Resources {
         counter: u8,
         led: LED,
@@ -207,75 +208,70 @@ const APP: () = {
         hid: HIDClass<'static, UsbBusType>,
     }
 
-    #[init(schedule = [on_tick])]
-    fn init(mut cx: init::Context) -> init::LateResources {
-        static mut USB_BUS: Option<bus::UsbBusAllocator<UsbBusType>> = None;
+    let p = pac::Peripherals::take().unwrap();
+    let mut flash = p.FLASH.constrain();
+    let mut rcc = p.RCC.constrain();
 
-        cx.core.DCB.enable_trace();
-        DWT::unlock();
-        cx.core.DWT.enable_cycle_counter();
+    let mut gpioc = p.GPIOC.split(&mut rcc.apb2);
+    let led = gpioc.pc13.into_push_pull_output(&mut gpioc.crh);
 
-        let mut flash = cx.device.FLASH.constrain();
-        let mut rcc = cx.device.RCC.constrain();
+    let clocks = rcc
+        .cfgr
+        .use_hse(8.mhz())
+        .sysclk(48.mhz())
+        .pclk1(24.mhz())
+        .freeze(&mut flash.acr);
 
-        let mut gpioc = cx.device.GPIOC.split(&mut rcc.apb2);
-        let led = gpioc.pc13.into_push_pull_output(&mut gpioc.crh);
+    assert!(clocks.usbclk_valid());
 
-        let clocks = rcc
-            .cfgr
-            .use_hse(8.mhz())
-            .sysclk(48.mhz())
-            .pclk1(24.mhz())
-            .freeze(&mut flash.acr);
+    let mut gpioa = p.GPIOA.split(&mut rcc.apb2);
 
-        assert!(clocks.usbclk_valid());
+    // BluePill board has a pull-up resistor on the D+ line.
+    // Pull the D+ pin down to send a RESET condition to the USB bus.
+    let mut usb_dp = gpioa.pa12.into_push_pull_output(&mut gpioa.crh);
+    usb_dp.set_low().ok();
+    delay(clocks.sysclk().0 / 100);
 
-        let mut gpioa = cx.device.GPIOA.split(&mut rcc.apb2);
+    let usb_dm = gpioa.pa11;
+    let usb_dp = usb_dp.into_floating_input(&mut gpioa.crh);
 
-        // BluePill board has a pull-up resistor on the D+ line.
-        // Pull the D+ pin down to send a RESET condition to the USB bus.
-        let mut usb_dp = gpioa.pa12.into_push_pull_output(&mut gpioa.crh);
-        usb_dp.set_low().ok();
-        delay(clocks.sysclk().0 / 100);
+    let usb = Peripheral {
+        usb: p.USB,
+        pin_dm: usb_dm,
+        pin_dp: usb_dp,
+    };
 
-        let usb_dm = gpioa.pa11;
-        let usb_dp = usb_dp.into_floating_input(&mut gpioa.crh);
+    static mut USB_BUS: Option<bus::UsbBusAllocator<UsbBusType>> = None;
 
-        let usb = Peripheral {
-            usb: cx.device.USB,
-            pin_dm: usb_dm,
-            pin_dp: usb_dp,
-        };
+    let usb_dev;
+    let hid;
 
-        *USB_BUS = Some(UsbBus::new(usb));
+    unsafe {
+        USB_BUS = Some(UsbBus::new(usb));
 
-        let hid = HIDClass::new(USB_BUS.as_ref().unwrap());
+        hid = HIDClass::new(USB_BUS.as_ref().unwrap());
 
-        let usb_dev = UsbDeviceBuilder::new(USB_BUS.as_ref().unwrap(), UsbVidPid(0xc410, 0x0000))
+        usb_dev = UsbDeviceBuilder::new(USB_BUS.as_ref().unwrap(), UsbVidPid(0xc410, 0x0000))
             .manufacturer("Fake company")
             .product("mouse")
             .serial_number("TEST")
             .device_class(0)
             .build();
-
-        cx.schedule.on_tick(cx.start + PERIOD.cycles()).ok();
-
-        init::LateResources {
-            counter: 0,
-            led,
-
-            usb_dev,
-            hid,
-        }
     }
 
-    #[task(schedule = [on_tick], resources = [counter, led, hid])]
-    fn on_tick(mut cx: on_tick::Context) {
-        cx.schedule.on_tick(Instant::now() + PERIOD.cycles()).ok();
+    let mut resources = Resources {
+        counter: 0,
+        led,
 
-        let counter: &mut u8 = &mut cx.resources.counter;
-        let led = &mut cx.resources.led;
-        let hid = &mut cx.resources.hid;
+        usb_dev,
+        hid,
+    };
+
+    loop {
+        // task1
+        let counter: &mut u8 = &mut resources.counter;
+        let led = &mut resources.led;
+        let hid = &mut resources.hid;
 
         const P: u8 = 2;
         *counter = (*counter + 1) % P;
@@ -288,32 +284,24 @@ const APP: () = {
             led.set_low().ok();
             hid.write(&hid::report(-10, 0));
         }
-    }
 
-    #[task(binds=USB_HP_CAN_TX, resources = [counter, led, usb_dev, hid])]
-    fn usb_tx(mut cx: usb_tx::Context) {
+        // task_usb_tx
         usb_poll(
-            &mut cx.resources.counter,
-            &mut cx.resources.led,
-            &mut cx.resources.usb_dev,
-            &mut cx.resources.hid,
+            &mut resources.counter,
+            &mut resources.led,
+            &mut resources.usb_dev,
+            &mut resources.hid,
+        );
+
+        // task_usb_rx
+        usb_poll(
+            &mut resources.counter,
+            &mut resources.led,
+            &mut resources.usb_dev,
+            &mut resources.hid,
         );
     }
-
-    #[task(binds=USB_LP_CAN_RX0, resources = [counter, led, usb_dev, hid])]
-    fn usb_rx(mut cx: usb_rx::Context) {
-        usb_poll(
-            &mut cx.resources.counter,
-            &mut cx.resources.led,
-            &mut cx.resources.usb_dev,
-            &mut cx.resources.hid,
-        );
-    }
-
-    extern "C" {
-        fn EXTI0();
-    }
-};
+}
 
 fn usb_poll<B: bus::UsbBus>(
     _counter: &mut u8,
