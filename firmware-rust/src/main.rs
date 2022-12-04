@@ -83,9 +83,11 @@ fn main() -> ! {
     // Pin maps
     let gpioa = p.GPIOA.split(&mut rcc);
 
-    let (spi_cs, spi_sck, spi_miso, spi_mosi, usb_dm, usb_dp) =
+    let (pmw_reset, spi_cs, spi_sck, spi_miso, spi_mosi, usb_dm, usb_dp) =
         cortex_m::interrupt::free(move |cs| {
             (
+                // PMW3360 reset
+                gpioa.pa10.into_push_pull_output(cs),
                 // SPI pins
                 gpioa.pa4.into_push_pull_output(cs),
                 gpioa.pa5.into_alternate_af0(cs),
@@ -113,7 +115,7 @@ fn main() -> ! {
     // Delay
     let delay = Delay::new(cp.SYST, &rcc);
 
-    let mut pmw = Pmw3360::new(spi, spi_cs, delay);
+    let mut pmw = Pmw3360::new(spi, spi_cs, pmw_reset, delay);
 
     // USB
 
@@ -144,26 +146,37 @@ fn main() -> ! {
             .device_class(0)
             .build();
     }
+    pmw.power_up().ok();
+
+    let mut report = MouseReport {
+        x: 0,
+        y: 0,
+        pan: 0,
+        wheel: 0,
+        buttons: 0,
+    };
 
     loop {
-        let p = pmw.write(2).unwrap();
+        let motion_data = pmw.burst_read().unwrap_or_default();
 
-        let report = MouseReport {
-            x: -10,
-            y: -(p as i8),
-            pan: 0,
-            wheel: 0,
-            buttons: 0,
-        };
+        // TODO: make this pretty
+        if motion_data.motion && motion_data.on_surface {
+            if motion_data.dx > 32767 {
+                report.x = (65535 - motion_data.dx) as i8;
+            } else {
+                report.x = -(motion_data.dx as i8);
+            }
+            if motion_data.dy > 32767 {
+                report.y = (65535 - motion_data.dy) as i8;
+            } else {
+                report.y = -(motion_data.dy as i8);
+            }
+        }
 
         usb_hid.as_mut().map(|h| h.push_input(&report));
 
-        usb_poll(&mut usb_dev, usb_hid.as_mut().unwrap());
-    }
-}
-
-fn usb_poll<B: bus::UsbBus>(usb_dev: &mut UsbDevice<'static, B>, hid: &mut HIDClass<'static, B>) {
-    if !usb_dev.poll(&mut [hid]) {
-        return;
+        if !usb_dev.poll(&mut [usb_hid.as_mut().unwrap()]) {
+            continue;
+        }
     }
 }
