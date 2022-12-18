@@ -21,7 +21,7 @@ use usb_device::{bus, prelude::*};
 use cortex_m;
 use cortex_m_rt::entry;
 
-use drivers::pmw3360::Pmw3360;
+use drivers::{encoder, pmw3360::Pmw3360};
 
 use mcu_abstraction::SpiBus;
 
@@ -82,22 +82,29 @@ fn main() -> ! {
 
     // Pin maps
     let gpioa = p.GPIOA.split(&mut rcc);
-
-    let (pmw_reset, spi_cs, spi_sck, spi_miso, spi_mosi, usb_dm, usb_dp) =
+    let (spi_cs, spi_sck, spi_miso, spi_mosi, pmw_reset, usb_dm, usb_dp) =
         cortex_m::interrupt::free(move |cs| {
             (
-                // PMW3360 reset
-                gpioa.pa10.into_push_pull_output(cs),
                 // SPI pins
                 gpioa.pa4.into_push_pull_output(cs),
                 gpioa.pa5.into_alternate_af0(cs),
                 gpioa.pa6.into_alternate_af0(cs),
                 gpioa.pa7.into_alternate_af0(cs),
-                // USART pins
+                // PMW3360 reset pin
+                gpioa.pa10.into_push_pull_output(cs),
+                // USB pins
                 gpioa.pa11,
                 gpioa.pa12,
             )
         });
+
+    let gpiob = p.GPIOB.split(&mut rcc);
+    let (enc_a, enc_b) = cortex_m::interrupt::free(move |cs| {
+        (
+            // Encoder pins
+            gpiob.pb6, gpiob.pb7,
+        )
+    });
 
     // SPI
     const MODE: Mode = Mode {
@@ -115,10 +122,7 @@ fn main() -> ! {
     // Delay
     let delay = Delay::new(cp.SYST, &rcc);
 
-    let mut pmw = Pmw3360::new(spi, spi_cs, pmw_reset, delay);
-
     // USB
-
     let usb = Peripheral {
         usb: p.USB,
         pin_dm: usb_dm,
@@ -146,20 +150,27 @@ fn main() -> ! {
             .device_class(0)
             .build();
     }
+
+    // TODO: share "delay"
+    // Sensor
+    let mut pmw = Pmw3360::new(spi, spi_cs, pmw_reset, delay);
     pmw.power_up().ok();
 
-    let mut report = MouseReport {
-        x: 0,
-        y: 0,
-        pan: 0,
-        wheel: 0,
-        buttons: 0,
-    };
+    // Encoder
+    let mut enc = encoder::Sw::new(enc_a, enc_b, delay);
 
     loop {
+        let mut report = MouseReport {
+            x: 0,
+            y: 0,
+            pan: 0,
+            wheel: 0,
+            buttons: 0,
+        };
+
         let motion_data = pmw.burst_read().unwrap_or_default();
 
-        // TODO: make this pretty
+        // // TODO: make this pretty
         if motion_data.motion && motion_data.on_surface {
             if motion_data.dx > 32767 {
                 report.x = (65535 - motion_data.dx) as i8;
@@ -171,6 +182,13 @@ fn main() -> ! {
             } else {
                 report.y = -(motion_data.dy as i8);
             }
+        }
+
+        let enc_status = enc.read().unwrap_or_default();
+        if enc_status == encoder::Rotation::Clockwise {
+            report.wheel = 1;
+        } else if enc_status == encoder::Rotation::CounterClockwise {
+            report.wheel = -1;
         }
 
         usb_hid.as_mut().map(|h| h.push_input(&report));
