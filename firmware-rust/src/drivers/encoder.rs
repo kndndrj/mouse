@@ -3,30 +3,36 @@ use core::convert::Infallible;
 use embedded_hal::blocking::delay::DelayUs;
 use embedded_hal::digital::v2::InputPin;
 
-#[derive(PartialEq)]
-pub enum Rotation {
-    None,
-    Clockwise,
-    CounterClockwise,
-}
+#[derive(Default, Clone, Copy)]
+pub struct Rotation(i8);
 
-impl Default for Rotation {
-    fn default() -> Self {
-        Self::None
+#[allow(dead_code)]
+impl Rotation {
+    pub fn count(&self) -> i8 {
+        return self.0;
     }
-}
 
-#[derive(Default, PartialEq)]
-struct State {
-    a: bool,
-    b: bool,
+    pub fn cw_count(&self) -> u8 {
+        if self.0 > 0 {
+            return self.0 as u8;
+        }
+        return 0;
+    }
+
+    pub fn ccw_count(&self) -> u8 {
+        if self.0 < 0 {
+            return -self.0 as u8;
+        }
+        return 0;
+    }
 }
 
 pub struct Sw<A: InputPin, B: InputPin, D: DelayUs<u32>> {
     a_pin: A,
     b_pin: B,
     delay: D,
-    state: State,
+    _last_a_state: bool,
+    _unread_state: Rotation,
 }
 
 impl<A, B, D> Sw<A, B, D>
@@ -36,69 +42,43 @@ where
     D: DelayUs<u32>,
 {
     pub fn new(channel_a_pin: A, channel_b_pin: B, delay: D) -> Self {
+        let a_state = channel_a_pin.is_high().unwrap_or_default();
+
         Self {
             a_pin: channel_a_pin,
             b_pin: channel_b_pin,
             delay,
-            state: State::default(),
+            _last_a_state: a_state,
+            _unread_state: Rotation(0),
         }
     }
 
-    pub fn read(&mut self) -> Result<Rotation, Infallible> {
+    pub fn update(&mut self) -> Result<(), Infallible> {
         // read current state
-        let mut new_state = State::default();
-        if self.a_pin.is_high().unwrap_or_default() {
-            new_state.a = true;
-        }
-        if self.b_pin.is_high().unwrap_or_default() {
-            new_state.b = true;
-        }
+        let current_a_state = self.a_pin.is_high().unwrap_or_default();
 
-        if self.state == new_state {
-            return Ok(Rotation::None);
+        if current_a_state == self._last_a_state {
+            self._last_a_state = current_a_state;
+            return Ok(());
         }
 
-        // determine direction based on state
-        // We only care about leading edges -> cw: a, c   ccw: d, b
-        //            _____       _____       _____
-        //           |     |     |     |     |     |
-        // ch A  ____|     |_____|     |_____|     |____
-        //
-        //           :  :  :  :  :  :  :  :  :  :  :  :
-        //      __       _____       _____       _____
-        //        |     |     |     |     |     |     |
-        // ch B   |_____|     |_____|     |_____|     |__
-        //
-        //           :  :  :  :  :  :  :  :  :  :  :  :
-        // event     a  b  c  d  a  b  c  d  a  b  c  d
+        if self.b_pin.is_high().unwrap_or_default() != current_a_state {
+            self._unread_state = Rotation(self._unread_state.0 + 1);
+        } else {
+            self._unread_state = Rotation(self._unread_state.0 - 1);
+        }
 
-        // Match structure:
-        // ({old_a, old_b}, {new_a, new_b})
-        #[rustfmt::skip]
-        let ret = match (&self.state, &new_state) {
-            // CW
-            // a
-            (State { a: false, b: false }, State { a: true, b: false }) => Rotation::Clockwise,
-            // c
-            (State { a: true, b: true }, State { a: false, b: true }) => Rotation::Clockwise,
-
-            // CCW
-            // d
-            (State { a: false, b: false }, State { a: false, b: true }) => Rotation::CounterClockwise,
-            // b
-            (State { a: true, b: true }, State { a: true, b: false }) => Rotation::CounterClockwise,
-
-            // Default
-            _ => Rotation::None,
-        };
-
-        // Update previous state
-        self.state = new_state;
+        self._last_a_state = current_a_state;
 
         // TODO: adjust
         // Debounce delay 20ms
         self.delay.delay_us(20000);
 
-        Ok(ret)
+        Ok(())
+    }
+    pub fn read(&mut self) -> Result<Rotation, Infallible> {
+        let r = self._unread_state;
+        self._unread_state = Rotation(0);
+        Ok(r)
     }
 }

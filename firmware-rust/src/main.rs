@@ -146,20 +146,15 @@ fn main() -> ! {
             }
         }
 
-        let enc_status = enc.read().unwrap_or_default();
-        if enc_status == encoder::Rotation::Clockwise {
-            report.wheel = 1;
-        } else if enc_status == encoder::Rotation::CounterClockwise {
-            report.wheel = -1;
-        }
+        enc.update().ok();
+
+        report.wheel = enc.read().unwrap_or_default().count();
 
         #[cfg(not(feature = "disable_usb"))]
         {
             usb_hid.as_mut().map(|h| h.push_input(&report));
 
-            if !usb_dev.poll(&mut [usb_hid.as_mut().unwrap()]) {
-                continue;
-            }
+            usb_dev.poll(&mut [usb_hid.as_mut().unwrap()]);
         }
     }
 }
