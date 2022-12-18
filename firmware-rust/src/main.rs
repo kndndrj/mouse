@@ -99,7 +99,7 @@ fn main() -> ! {
         });
 
     let gpiob = p.GPIOB.split(&mut rcc);
-    let (enc_a, enc_b) = cortex_m::interrupt::free(move |cs| {
+    let (enc_a, enc_b) = cortex_m::interrupt::free(move |_| {
         (
             // Encoder pins
             gpiob.pb6, gpiob.pb7,
@@ -118,9 +118,6 @@ fn main() -> ! {
         1.mhz(),
         &mut rcc,
     );
-
-    // Delay
-    let delay = Delay::new(cp.SYST, &rcc);
 
     // USB
     let usb = Peripheral {
@@ -151,9 +148,11 @@ fn main() -> ! {
             .build();
     }
 
-    // TODO: share "delay"
+    // Delay
+    let delay = Delay::new(cp.SYST, &rcc);
+
     // Sensor
-    let mut pmw = Pmw3360::new(spi, spi_cs, pmw_reset, delay);
+    let mut pmw = Pmw3360::new(spi, spi_cs, pmw_reset, delay.clone());
     pmw.power_up().ok();
 
     // Encoder
