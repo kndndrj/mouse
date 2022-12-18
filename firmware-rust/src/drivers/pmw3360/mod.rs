@@ -4,8 +4,7 @@ mod srom_tracking;
 
 use core::convert::Infallible;
 
-use crate::mcu_abstraction::SpiBus;
-use embedded_hal::blocking::delay::DelayUs;
+use embedded_hal::blocking::{delay::DelayUs, spi::Transfer};
 use embedded_hal::digital::v2::OutputPin;
 
 use registers as reg;
@@ -23,7 +22,7 @@ pub struct BurstData {
     pub shutter: u16,
 }
 
-pub struct Pmw3360<S: SpiBus<u8>, CS: OutputPin, RESET: OutputPin, D: DelayUs<u32>> {
+pub struct Pmw3360<S: Transfer<u8>, CS: OutputPin, RESET: OutputPin, D: DelayUs<u32>> {
     spi: S,
     cs_pin: CS,
     reset_pin: RESET,
@@ -32,7 +31,7 @@ pub struct Pmw3360<S: SpiBus<u8>, CS: OutputPin, RESET: OutputPin, D: DelayUs<u3
 
 impl<S, CS, RESET, D> Pmw3360<S, CS, RESET, D>
 where
-    S: SpiBus<u8>,
+    S: Transfer<u8>,
     CS: OutputPin,
     RESET: OutputPin,
     D: DelayUs<u32>,
@@ -98,7 +97,7 @@ where
         // Lower NCS
         self.cs_pin.set_low().ok();
         // Send Motion_burst address
-        self.spi.xfer(reg::MOTION_BURST).ok();
+        self.spi.transfer(&mut [reg::MOTION_BURST]).ok();
 
         // tSRAD_MOTBR
         self.delay.delay_us(35);
@@ -106,7 +105,12 @@ where
         // Read the 12 bytes of burst data
         let mut buf = [0u8; 12];
         for i in 0..buf.len() {
-            buf[i] = self.spi.xfer(0x00).unwrap_or_else(|_| 0);
+            buf[i] = *self
+                .spi
+                .transfer(&mut [0x00])
+                .unwrap_or_else(|_| -> &[u8] { &[0] })
+                .first()
+                .unwrap();
         }
 
         // Raise NCS
@@ -169,9 +173,9 @@ where
         self.delay.delay_us(100);
 
         // send adress of the register, with MSBit = 1 to indicate it's a write
-        self.spi.xfer(address | 0x80).ok();
+        self.spi.transfer(&mut [address | 0x80]).ok();
         // send data
-        self.spi.xfer(data).ok();
+        self.spi.transfer(&mut [data]).ok();
         // tSCLK-NCS for write operation
         self.delay.delay_us(100 + 35);
         self.cs_pin.set_high().ok();
@@ -189,14 +193,14 @@ where
         self.delay.delay_us(100);
 
         // send adress of the register, with MSBit = 0 to indicate it's a read
-        self.spi.xfer(address & 0x7f).ok();
+        self.spi.transfer(&mut [address & 0x7f]).ok();
 
         // tSRAD
         self.delay.delay_us(160);
 
         let mut ret = 0;
-        if let Ok(r) = self.spi.xfer(0x00) {
-            ret = r;
+        if let Ok(r) = self.spi.transfer(&mut [0x00]) {
+            ret = *r.first().unwrap();
         }
 
         self.delay.delay_us(100);
@@ -225,12 +229,12 @@ where
         self.cs_pin.set_low().ok();
 
         // first byte is address
-        self.spi.xfer(reg::SROM_LOAD_BURST | 0x80).ok();
+        self.spi.transfer(&mut [reg::SROM_LOAD_BURST | 0x80]).ok();
         self.delay.delay_us(15);
 
         // send the rest of the firmware
         for element in srom_tracking::FW.iter() {
-            self.spi.xfer(*element).ok();
+            self.spi.transfer(&mut [*element]).ok();
             self.delay.delay_us(15);
         }
 

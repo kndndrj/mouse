@@ -2,15 +2,12 @@
 #![no_main]
 
 mod drivers;
-mod mcu_abstraction;
-
-use core::convert::Infallible;
 
 use panic_halt as _;
 
-use stm32f0xx_hal::spi::{self, Mode, Phase, Polarity, Spi};
+use stm32f0xx_hal::spi::{Mode, Phase, Polarity, Spi};
 use stm32f0xx_hal::usb::{Peripheral, UsbBus, UsbBusType};
-use stm32f0xx_hal::{delay::Delay, gpio, pac, prelude::*};
+use stm32f0xx_hal::{delay::Delay, pac, prelude::*};
 
 use usbd_hid::descriptor::generator_prelude::*;
 use usbd_hid::descriptor::MouseReport;
@@ -22,48 +19,6 @@ use cortex_m;
 use cortex_m_rt::entry;
 
 use drivers::{encoder, pmw3360::Pmw3360};
-
-use mcu_abstraction::SpiBus;
-
-// TODO: hal or custom interface?
-// use mcu_abstraction::GpioOutputPin;
-
-// impl GpioOutputPin for gpio::gpioc::PC13<Output<gpio::PushPull>> {
-//     type Error = Infallible;
-
-//     fn set(&mut self) -> Result<(), Self::Error> {
-//         self.set_high()?;
-//         Ok(())
-//     }
-//     fn clear(&mut self) -> Result<(), Self::Error> {
-//         self.set_low()?;
-//         Ok(())
-//     }
-// }
-
-// let gpioc = p.GPIOC.split(&mut rcc);
-// let mut led = cortex_m::interrupt::free(move |cs| gpioc.pc13.into_push_pull_output(cs));
-// led.set().unwrap();
-
-impl SpiBus<u8>
-    for Spi<
-        pac::SPI1,
-        gpio::gpioa::PA5<gpio::Alternate<gpio::AF0>>,
-        gpio::gpioa::PA6<gpio::Alternate<gpio::AF0>>,
-        gpio::gpioa::PA7<gpio::Alternate<gpio::AF0>>,
-        spi::EightBit,
-    >
-{
-    type Error = Infallible;
-
-    fn xfer(&mut self, data: u8) -> Result<u8, Self::Error> {
-        let mut binding = [data];
-        let r = self
-            .transfer(&mut binding)
-            .unwrap_or_else(|_| -> &[u8] { &[0] });
-        Ok(*r.first().unwrap())
-    }
-}
 
 #[entry]
 fn main() -> ! {

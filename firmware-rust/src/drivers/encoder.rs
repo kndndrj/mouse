@@ -74,6 +74,7 @@ where
 
         // Match structure:
         // ({old_a, old_b}, {new_a, new_b})
+        #[rustfmt::skip]
         let ret = match (&self.state, &new_state) {
             // CW
             // a
@@ -83,9 +84,7 @@ where
 
             // CCW
             // d
-            (State { a: false, b: false }, State { a: false, b: true }) => {
-                Rotation::CounterClockwise
-            }
+            (State { a: false, b: false }, State { a: false, b: true }) => Rotation::CounterClockwise,
             // b
             (State { a: true, b: true }, State { a: true, b: false }) => Rotation::CounterClockwise,
 
