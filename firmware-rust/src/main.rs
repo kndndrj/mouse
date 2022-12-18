@@ -6,14 +6,17 @@ mod drivers;
 use panic_halt as _;
 
 use stm32f0xx_hal::spi::{Mode, Phase, Polarity, Spi};
-use stm32f0xx_hal::usb::{Peripheral, UsbBus, UsbBusType};
 use stm32f0xx_hal::{delay::Delay, pac, prelude::*};
 
-use usbd_hid::descriptor::generator_prelude::*;
 use usbd_hid::descriptor::MouseReport;
-use usbd_hid::hid_class::HIDClass;
 
-use usb_device::{bus, prelude::*};
+#[cfg(not(feature = "disable_usb"))]
+use {
+    stm32f0xx_hal::usb::{Peripheral, UsbBus, UsbBusType},
+    usb_device::{bus, prelude::*},
+    usbd_hid::descriptor::generator_prelude::*,
+    usbd_hid::hid_class::HIDClass,
+};
 
 use cortex_m;
 use cortex_m_rt::entry;
@@ -75,32 +78,37 @@ fn main() -> ! {
     );
 
     // USB
-    let usb = Peripheral {
-        usb: p.USB,
-        pin_dm: usb_dm,
-        pin_dp: usb_dp,
-    };
+    #[cfg(not(feature = "disable_usb"))]
+    let mut usb_hid: Option<HIDClass<UsbBus<Peripheral>>>;
+    #[cfg(not(feature = "disable_usb"))]
+    let mut usb_dev: UsbDevice<UsbBus<Peripheral>>;
 
-    static mut USB_BUS: Option<bus::UsbBusAllocator<UsbBusType>> = None;
+    #[cfg(not(feature = "disable_usb"))]
+    {
+        let usb = Peripheral {
+            usb: p.USB,
+            pin_dm: usb_dm,
+            pin_dp: usb_dp,
+        };
 
-    let mut usb_dev;
-    let mut usb_hid;
+        static mut USB_BUS: Option<bus::UsbBusAllocator<UsbBusType>> = None;
 
-    unsafe {
-        USB_BUS = Some(UsbBus::new(usb));
+        unsafe {
+            USB_BUS = Some(UsbBus::new(usb));
 
-        usb_hid = Some(HIDClass::new(
-            USB_BUS.as_ref().unwrap(),
-            MouseReport::desc(),
-            20,
-        ));
+            usb_hid = Some(HIDClass::new(
+                USB_BUS.as_ref().unwrap(),
+                MouseReport::desc(),
+                20,
+            ));
 
-        usb_dev = UsbDeviceBuilder::new(USB_BUS.as_ref().unwrap(), UsbVidPid(0xc410, 0x0000))
-            .manufacturer("Fake company")
-            .product("mouse")
-            .serial_number("TEST")
-            .device_class(0)
-            .build();
+            usb_dev = UsbDeviceBuilder::new(USB_BUS.as_ref().unwrap(), UsbVidPid(0xc410, 0x0000))
+                .manufacturer("Fake company")
+                .product("mouse")
+                .serial_number("TEST")
+                .device_class(0)
+                .build();
+        }
     }
 
     // Delay
@@ -145,10 +153,13 @@ fn main() -> ! {
             report.wheel = -1;
         }
 
-        usb_hid.as_mut().map(|h| h.push_input(&report));
+        #[cfg(not(feature = "disable_usb"))]
+        {
+            usb_hid.as_mut().map(|h| h.push_input(&report));
 
-        if !usb_dev.poll(&mut [usb_hid.as_mut().unwrap()]) {
-            continue;
+            if !usb_dev.poll(&mut [usb_hid.as_mut().unwrap()]) {
+                continue;
+            }
         }
     }
 }
