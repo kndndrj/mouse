@@ -1,6 +1,5 @@
 use core::convert::Infallible;
 
-use embedded_hal::blocking::delay::DelayUs;
 use embedded_hal::digital::v2::InputPin;
 
 #[derive(Default, Clone, Copy)]
@@ -27,29 +26,26 @@ impl Rotation {
     }
 }
 
-pub struct Sw<A: InputPin, B: InputPin, D: DelayUs<u32>> {
+pub struct Sw<A: InputPin, B: InputPin> {
     a_pin: A,
     b_pin: B,
-    delay: D,
-    _last_a_state: bool,
-    _unread_state: Rotation,
+    last_a_state: bool,
+    unread_state: Rotation,
 }
 
-impl<A, B, D> Sw<A, B, D>
+impl<A, B> Sw<A, B>
 where
     A: InputPin,
     B: InputPin,
-    D: DelayUs<u32>,
 {
-    pub fn new(channel_a_pin: A, channel_b_pin: B, delay: D) -> Self {
+    pub fn new(channel_a_pin: A, channel_b_pin: B) -> Self {
         let a_state = channel_a_pin.is_high().unwrap_or_default();
 
         Self {
             a_pin: channel_a_pin,
             b_pin: channel_b_pin,
-            delay,
-            _last_a_state: a_state,
-            _unread_state: Rotation(0),
+            last_a_state: a_state,
+            unread_state: Rotation(0),
         }
     }
 
@@ -57,28 +53,24 @@ where
         // read current state
         let current_a_state = self.a_pin.is_high().unwrap_or_default();
 
-        if current_a_state == self._last_a_state {
-            self._last_a_state = current_a_state;
+        if current_a_state == self.last_a_state {
+            self.last_a_state = current_a_state;
             return Ok(());
         }
 
         if self.b_pin.is_high().unwrap_or_default() != current_a_state {
-            self._unread_state = Rotation(self._unread_state.0 + 1);
+            self.unread_state = Rotation(self.unread_state.0 + 1);
         } else {
-            self._unread_state = Rotation(self._unread_state.0 - 1);
+            self.unread_state = Rotation(self.unread_state.0 - 1);
         }
 
-        self._last_a_state = current_a_state;
-
-        // TODO: adjust
-        // Debounce delay 20ms
-        self.delay.delay_us(20000);
+        self.last_a_state = current_a_state;
 
         Ok(())
     }
     pub fn read(&mut self) -> Result<Rotation, Infallible> {
-        let r = self._unread_state;
-        self._unread_state = Rotation(0);
+        let r = self.unread_state;
+        self.unread_state = Rotation(0);
         Ok(r)
     }
 }

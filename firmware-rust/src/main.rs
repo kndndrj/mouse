@@ -115,21 +115,21 @@ fn main() -> ! {
     let delay = Delay::new(cp.SYST, &rcc);
 
     // Sensor
-    let mut pmw = Pmw3360::new(spi, spi_cs, pmw_reset, delay.clone());
+    let mut pmw = Pmw3360::new(spi, spi_cs, pmw_reset, delay);
     pmw.power_up().ok();
 
     // Encoder
-    let mut enc = encoder::Sw::new(enc_a, enc_b, delay);
+    let mut enc = encoder::Sw::new(enc_a, enc_b);
+
+    let mut report = MouseReport {
+        x: 0,
+        y: 0,
+        pan: 0,
+        wheel: 0,
+        buttons: 0,
+    };
 
     loop {
-        let mut report = MouseReport {
-            x: 0,
-            y: 0,
-            pan: 0,
-            wheel: 0,
-            buttons: 0,
-        };
-
         let motion_data = pmw.burst_read().unwrap_or_default();
 
         // // TODO: make this pretty
@@ -148,13 +148,23 @@ fn main() -> ! {
 
         enc.update().ok();
 
-        report.wheel = enc.read().unwrap_or_default().count();
+        if report.wheel == 0 {
+            report.wheel = enc.read().unwrap_or_default().count();
+        }
 
         #[cfg(not(feature = "disable_usb"))]
         {
             usb_hid.as_mut().map(|h| h.push_input(&report));
 
-            usb_dev.poll(&mut [usb_hid.as_mut().unwrap()]);
+            if usb_dev.poll(&mut [usb_hid.as_mut().unwrap()]) {
+                report = MouseReport {
+                    x: 0,
+                    y: 0,
+                    pan: 0,
+                    wheel: 0,
+                    buttons: 0,
+                };
+            }
         }
     }
 }
