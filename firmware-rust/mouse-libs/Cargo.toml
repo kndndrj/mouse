@@ -1,0 +1,9 @@
+[package]
+authors = ["Andrej Kenda"]
+edition = "2018"
+readme = "README.md"
+name = "mouse-libs"
+version = "0.1.0"
+
+[dependencies]
+embedded-hal = { version = "0.2", features = ["unproven"] }

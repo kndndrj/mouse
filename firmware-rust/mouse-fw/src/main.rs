@@ -1,8 +1,6 @@
 #![no_std]
 #![no_main]
 
-mod drivers;
-
 use panic_halt as _;
 
 use stm32f0xx_hal::spi::{Mode, Phase, Polarity, Spi};
@@ -21,7 +19,7 @@ use {
 use cortex_m;
 use cortex_m_rt::entry;
 
-use drivers::{
+use mouse_libs::{
     debouncer::{self, Debouncer},
     encoder::Encoder,
     pmw3360::Pmw3360,
@@ -138,6 +136,7 @@ fn main() -> ! {
     // Sensor
     let mut pmw = Pmw3360::new(spi, spi_cs, pmw_reset, delay);
     pmw.power_up().ok();
+    pmw.set_cpi(10000).unwrap_or_default();
 
     // Encoder
     let mut enc = Encoder::new(enc_a, enc_b);
@@ -156,22 +155,21 @@ fn main() -> ! {
     loop {
         let motion_data = pmw.burst_read().unwrap_or_default();
 
-        // // TODO: make this pretty
         if motion_data.motion && motion_data.on_surface {
             if motion_data.dx > 127 {
-                report.x = 127;
-            }else if motion_data.dx < -127 {
                 report.x = -127;
+            }else if motion_data.dx < -127 {
+                report.x = 127;
             } else {
-                report.x = motion_data.dx as i8;
+                report.x = -motion_data.dx as i8;
             }
 
             if motion_data.dy > 127 {
-                report.y = 127;
-            }else if motion_data.dy < -127 {
                 report.y = -127;
+            }else if motion_data.dy < -127 {
+                report.y = 127;
             } else {
-                report.y = motion_data.dy as i8;
+                report.y = -motion_data.dy as i8;
             }
         }
 
