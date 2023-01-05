@@ -157,15 +157,20 @@ fn main() -> ! {
 
         // // TODO: make this pretty
         if motion_data.motion && motion_data.on_surface {
-            if motion_data.dx > 32767 {
-                report.x = (65535 - motion_data.dx) as i8;
+            if motion_data.dx > 127 {
+                report.x = 127;
+            }else if motion_data.dx < -127 {
+                report.x = -127;
             } else {
-                report.x = -(motion_data.dx as i8);
+                report.x = motion_data.dx as i8;
             }
-            if motion_data.dy > 32767 {
-                report.y = (65535 - motion_data.dy) as i8;
+
+            if motion_data.dy > 127 {
+                report.y = 127;
+            }else if motion_data.dy < -127 {
+                report.y = -127;
             } else {
-                report.y = -(motion_data.dy as i8);
+                report.y = motion_data.dy as i8;
             }
         }
 

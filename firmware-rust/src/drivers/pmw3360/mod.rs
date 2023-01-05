@@ -13,8 +13,8 @@ use registers as reg;
 pub struct BurstData {
     pub motion: bool,
     pub on_surface: bool,
-    pub dx: u16,
-    pub dy: u16,
+    pub dx: i16,
+    pub dy: i16,
     pub surface_quality: u8,
     pub raw_data_sum: u8,
     pub max_raw_data: u8,
@@ -119,8 +119,8 @@ where
         let data = BurstData {
             motion: (buf[0] & 0x80) != 0,
             on_surface: (buf[0] & 0x08) == 0, // 0 if on surface / 1 if off surface
-            dx: (buf[3] as u16) << 8 | (buf[2] as u16),
-            dy: (buf[5] as u16) << 8 | (buf[4] as u16),
+            dx: (buf[3] as i16) << 8 | (buf[2] as i16),
+            dy: (buf[5] as i16) << 8 | (buf[4] as i16),
             surface_quality: buf[6],
             raw_data_sum: buf[7],
             max_raw_data: buf[8],
