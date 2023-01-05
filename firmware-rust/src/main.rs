@@ -122,10 +122,11 @@ fn main() -> ! {
                 20,
             ));
 
+            // USB_SERIAL_NUMBER defined in build.rs at compile time
             usb_dev = UsbDeviceBuilder::new(USB_BUS.as_ref().unwrap(), UsbVidPid(0xc410, 0x0000))
                 .manufacturer("Fake company")
                 .product("mouse")
-                .serial_number("TEST")
+                .serial_number(env!("USB_SERIAL_NUMBER"))
                 .device_class(0)
                 .build();
         }
