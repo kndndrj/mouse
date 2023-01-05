@@ -117,7 +117,7 @@ fn main() -> ! {
             usb_hid = Some(HIDClass::new(
                 USB_BUS.as_ref().unwrap(),
                 MouseReport::desc(),
-                20,
+                1,
             ));
 
             // USB_SERIAL_NUMBER defined in build.rs at compile time
@@ -136,7 +136,7 @@ fn main() -> ! {
     // Sensor
     let mut pmw = Pmw3360::new(spi, spi_cs, pmw_reset, delay);
     pmw.power_up().ok();
-    pmw.set_cpi(10000).unwrap_or_default();
+    pmw.set_cpi(1200).unwrap_or_default();
 
     // Encoder
     let mut enc = Encoder::new(enc_a, enc_b);
