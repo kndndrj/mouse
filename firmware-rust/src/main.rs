@@ -21,7 +21,11 @@ use {
 use cortex_m;
 use cortex_m_rt::entry;
 
-use drivers::{encoder::Encoder, pmw3360::Pmw3360};
+use drivers::{
+    debouncer::{self, Debouncer},
+    encoder::Encoder,
+    pmw3360::Pmw3360,
+};
 
 #[entry]
 fn main() -> ! {
@@ -137,6 +141,9 @@ fn main() -> ! {
     // Encoder
     let mut enc = Encoder::new(enc_a, enc_b);
 
+    // Debouncer for cpi pin
+    let mut debouncer_cpi = Debouncer::new(8);
+
     let mut report = MouseReport {
         x: 0,
         y: 0,
@@ -177,8 +184,17 @@ fn main() -> ! {
         if button_middle.is_low().unwrap_or_default() {
             report.buttons = report.buttons | (1 << 2);
         }
-        // TODO: change cpi
-        if button_cpi.is_low().unwrap_or_default() {
+        // Debouncer is meant to be used with a scheduler, but the buttons on our pcb are very well
+        // hw debounced, so we use it to detect the edge
+        let cpi_button_state = debouncer_cpi
+            .update(button_cpi.is_high().unwrap_or_default())
+            .unwrap_or_default();
+        if cpi_button_state == debouncer::State::Low {
+            let mut cpi = pmw.get_cpi().unwrap_or_default() + 2000;
+            if cpi > 12000 {
+                cpi = 0;
+            }
+            pmw.set_cpi(cpi).unwrap_or_default();
         }
 
         #[cfg(not(feature = "disable_usb"))]

@@ -79,9 +79,6 @@ where
 
         self.delay.delay_us(100);
 
-        // TODO: do this outside
-        self.set_cpi(0x32).ok();
-
         if is_valid_signature {
             return Ok(());
         };
@@ -134,9 +131,22 @@ where
         Ok(data)
     }
 
-    pub fn set_cpi(&mut self, cpi: u8) -> Result<(), Infallible> {
-        self.write(reg::CONFIG_1, cpi).ok();
+    pub fn set_cpi(&mut self, cpi: u16) -> Result<(), Infallible> {
+        let val: u16;
+        if cpi < 100 {
+            val = 0
+        } else if cpi > 12000 {
+            val = 0x77
+        } else {
+            val = (cpi - 100) / 100;
+        }
+        self.write(reg::CONFIG_1, val as u8).ok();
         Ok(())
+    }
+
+    pub fn get_cpi(&mut self) -> Result<u16, Infallible> {
+        let val = self.read(reg::CONFIG_1).unwrap_or_default() as u16;
+        Ok((val + 1) * 100)
     }
 
     pub fn check_signature(&mut self) -> Result<bool, Infallible> {
