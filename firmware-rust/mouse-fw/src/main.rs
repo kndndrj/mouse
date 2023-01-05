@@ -3,17 +3,26 @@
 
 use panic_halt as _;
 
+use packed_struct::prelude::*;
+
 use stm32f0xx_hal::spi::{Mode, Phase, Polarity, Spi};
 use stm32f0xx_hal::{delay::Delay, pac, prelude::*};
 
-use usbd_hid::descriptor::MouseReport;
+use usbd_human_interface_device::device::mouse::WheelMouseReport;
 
 #[cfg(not(feature = "disable_usb"))]
 use {
-    stm32f0xx_hal::usb::{Peripheral, UsbBus, UsbBusType},
-    usb_device::{bus, prelude::*},
-    usbd_hid::descriptor::generator_prelude::*,
-    usbd_hid::hid_class::HIDClass,
+    embedded_time::duration::Milliseconds,
+    stm32f0xx_hal::usb::{Peripheral, UsbBus},
+    usb_device::prelude::*,
+    usbd_human_interface_device::{
+        device::mouse::WHEEL_MOUSE_REPORT_DESCRIPTOR,
+        prelude::*,
+        {
+            hid_class::{prelude::InterfaceProtocol, UsbPacketSize},
+            interface::raw::RawInterfaceBuilder,
+        },
+    },
 };
 
 use cortex_m;
@@ -97,38 +106,30 @@ fn main() -> ! {
 
     // USB
     #[cfg(not(feature = "disable_usb"))]
-    let mut usb_hid: Option<HIDClass<UsbBus<Peripheral>>>;
+    let usb_bus = UsbBus::new(Peripheral {
+        usb: p.USB,
+        pin_dm: usb_dm,
+        pin_dp: usb_dp,
+    });
     #[cfg(not(feature = "disable_usb"))]
-    let mut usb_dev: UsbDevice<UsbBus<Peripheral>>;
-
+    let mut mouse = UsbHidClassBuilder::new()
+        .add_interface(
+            RawInterfaceBuilder::new(WHEEL_MOUSE_REPORT_DESCRIPTOR)
+                .boot_device(InterfaceProtocol::Mouse)
+                .description("Wheel Mouse")
+                .in_endpoint(UsbPacketSize::Bytes8, Milliseconds(1))
+                .unwrap()
+                .without_out_endpoint()
+                .build(),
+        )
+        .build(&usb_bus);
+    // USB_SERIAL_NUMBER defined in build.rs at compile time
     #[cfg(not(feature = "disable_usb"))]
-    {
-        let usb = Peripheral {
-            usb: p.USB,
-            pin_dm: usb_dm,
-            pin_dp: usb_dp,
-        };
-
-        static mut USB_BUS: Option<bus::UsbBusAllocator<UsbBusType>> = None;
-
-        unsafe {
-            USB_BUS = Some(UsbBus::new(usb));
-
-            usb_hid = Some(HIDClass::new(
-                USB_BUS.as_ref().unwrap(),
-                MouseReport::desc(),
-                1,
-            ));
-
-            // USB_SERIAL_NUMBER defined in build.rs at compile time
-            usb_dev = UsbDeviceBuilder::new(USB_BUS.as_ref().unwrap(), UsbVidPid(0xc410, 0x0000))
-                .manufacturer("Fake company")
-                .product("mouse")
-                .serial_number(env!("USB_SERIAL_NUMBER"))
-                .device_class(0)
-                .build();
-        }
-    }
+    let mut usb_dev = UsbDeviceBuilder::new(&usb_bus, UsbVidPid(0xc410, 0x0000))
+        .manufacturer("Mouse Manufacturer")
+        .product("mouse product")
+        .serial_number(env!("USB_SERIAL_NUMBER"))
+        .build();
 
     // Delay
     let delay = Delay::new(cp.SYST, &rcc);
@@ -144,13 +145,7 @@ fn main() -> ! {
     // Debouncer for cpi pin
     let mut debouncer_cpi = Debouncer::new(8);
 
-    let mut report = MouseReport {
-        x: 0,
-        y: 0,
-        pan: 0,
-        wheel: 0,
-        buttons: 0,
-    };
+    let mut report = WheelMouseReport::default();
 
     loop {
         let motion_data = pmw.burst_read().unwrap_or_default();
@@ -158,7 +153,7 @@ fn main() -> ! {
         if motion_data.motion && motion_data.on_surface {
             if motion_data.dx > 127 {
                 report.x = -127;
-            }else if motion_data.dx < -127 {
+            } else if motion_data.dx < -127 {
                 report.x = 127;
             } else {
                 report.x = -motion_data.dx as i8;
@@ -166,7 +161,7 @@ fn main() -> ! {
 
             if motion_data.dy > 127 {
                 report.y = -127;
-            }else if motion_data.dy < -127 {
+            } else if motion_data.dy < -127 {
                 report.y = 127;
             } else {
                 report.y = -motion_data.dy as i8;
@@ -175,8 +170,8 @@ fn main() -> ! {
 
         enc.update().ok();
 
-        if report.wheel == 0 {
-            report.wheel = enc.read().unwrap_or_default().count();
+        if report.vertical_wheel == 0 {
+            report.vertical_wheel = enc.read().unwrap_or_default().count();
         }
 
         if button_left.is_low().unwrap_or_default() {
@@ -203,16 +198,10 @@ fn main() -> ! {
 
         #[cfg(not(feature = "disable_usb"))]
         {
-            usb_hid.as_mut().map(|h| h.push_input(&report));
+            mouse.interface().write_report(&report.pack().unwrap()).ok();
 
-            if usb_dev.poll(&mut [usb_hid.as_mut().unwrap()]) {
-                report = MouseReport {
-                    x: 0,
-                    y: 0,
-                    pan: 0,
-                    wheel: 0,
-                    buttons: 0,
-                };
+            if usb_dev.poll(&mut [&mut mouse]) {
+                report = WheelMouseReport::default();
             }
         }
     }

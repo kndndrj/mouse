@@ -11,7 +11,9 @@ cortex-m-rt = "0.6"
 stm32f0xx-hal = { version = "0.18", features = ["stm32f042", "stm32-usbd", "rt"]}
 panic-halt = "0.2.0"
 usb-device = "0.2.4"
-usbd-hid = "0.6.1"
+embedded-time = "0.12"
+usbd-human-interface-device = "0.3"
+packed_struct = { version = "0.10", default-features = false }
 mouse-libs = { path = "../mouse-libs" }
 
 # this lets you use `cargo fix`!

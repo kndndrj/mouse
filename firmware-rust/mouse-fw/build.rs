@@ -36,7 +36,7 @@ fn main() {
         Command::new("cmd")
             .args(&[
                 "/C",
-                "git describe --exact-match --tags || git rev-parse HEAD",
+                "git describe --exact-match --tags || git rev-parse --short HEAD",
             ])
             .output()
             .expect("failed to run cmd command")
@@ -44,7 +44,7 @@ fn main() {
         Command::new("sh")
             .args(&[
                 "-c",
-                "git describe --exact-match --tags || git rev-parse HEAD",
+                "git describe --exact-match --tags || git rev-parse --short HEAD",
             ])
             .output()
             .expect("failed to run shell command")
