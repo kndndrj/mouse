@@ -21,7 +21,7 @@ use {
 use cortex_m;
 use cortex_m_rt::entry;
 
-use drivers::{encoder, pmw3360::Pmw3360};
+use drivers::{encoder::Encoder, pmw3360::Pmw3360};
 
 #[entry]
 fn main() -> ! {
@@ -40,21 +40,37 @@ fn main() -> ! {
 
     // Pin maps
     let gpioa = p.GPIOA.split(&mut rcc);
-    let (spi_cs, spi_sck, spi_miso, spi_mosi, pmw_reset, usb_dm, usb_dp) =
-        cortex_m::interrupt::free(move |cs| {
-            (
-                // SPI pins
-                gpioa.pa4.into_push_pull_output(cs),
-                gpioa.pa5.into_alternate_af0(cs),
-                gpioa.pa6.into_alternate_af0(cs),
-                gpioa.pa7.into_alternate_af0(cs),
-                // PMW3360 reset pin
-                gpioa.pa10.into_push_pull_output(cs),
-                // USB pins
-                gpioa.pa11,
-                gpioa.pa12,
-            )
-        });
+    let (
+        button_left,
+        button_right,
+        button_middle,
+        button_cpi,
+        spi_cs,
+        spi_sck,
+        spi_miso,
+        spi_mosi,
+        pmw_reset,
+        usb_dm,
+        usb_dp,
+    ) = cortex_m::interrupt::free(move |cs| {
+        (
+            // Button pins
+            gpioa.pa0,
+            gpioa.pa1,
+            gpioa.pa2,
+            gpioa.pa3,
+            // SPI pins
+            gpioa.pa4.into_push_pull_output(cs),
+            gpioa.pa5.into_alternate_af0(cs),
+            gpioa.pa6.into_alternate_af0(cs),
+            gpioa.pa7.into_alternate_af0(cs),
+            // PMW3360 reset pin
+            gpioa.pa10.into_push_pull_output(cs),
+            // USB pins
+            gpioa.pa11,
+            gpioa.pa12,
+        )
+    });
 
     let gpiob = p.GPIOB.split(&mut rcc);
     let (enc_a, enc_b) = cortex_m::interrupt::free(move |_| {
@@ -119,7 +135,7 @@ fn main() -> ! {
     pmw.power_up().ok();
 
     // Encoder
-    let mut enc = encoder::Sw::new(enc_a, enc_b);
+    let mut enc = Encoder::new(enc_a, enc_b);
 
     let mut report = MouseReport {
         x: 0,
@@ -150,6 +166,19 @@ fn main() -> ! {
 
         if report.wheel == 0 {
             report.wheel = enc.read().unwrap_or_default().count();
+        }
+
+        if button_left.is_low().unwrap_or_default() {
+            report.buttons = report.buttons | (1 << 0);
+        }
+        if button_right.is_low().unwrap_or_default() {
+            report.buttons = report.buttons | (1 << 1);
+        }
+        if button_middle.is_low().unwrap_or_default() {
+            report.buttons = report.buttons | (1 << 2);
+        }
+        // TODO: change cpi
+        if button_cpi.is_low().unwrap_or_default() {
         }
 
         #[cfg(not(feature = "disable_usb"))]

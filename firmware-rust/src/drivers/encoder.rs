@@ -26,14 +26,14 @@ impl Rotation {
     }
 }
 
-pub struct Sw<A: InputPin, B: InputPin> {
+pub struct Encoder<A: InputPin, B: InputPin> {
     a_pin: A,
     b_pin: B,
     last_a_state: bool,
     unread_state: Rotation,
 }
 
-impl<A, B> Sw<A, B>
+impl<A, B> Encoder<A, B>
 where
     A: InputPin,
     B: InputPin,
@@ -68,6 +68,7 @@ where
 
         Ok(())
     }
+
     pub fn read(&mut self) -> Result<Rotation, Infallible> {
         let r = self.unread_state;
         self.unread_state = Rotation(0);
