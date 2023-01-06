@@ -3,6 +3,7 @@
 *.bak
 *.bck
 *.kicad_pcb-bak
+*.kicad_pro-bak
 *.kicad_sch-bak
 *-backups
 *-cache.lib
@@ -24,3 +25,6 @@ fp-info-cache
 
 # Exported BOM files
 *.xml
+
+# CI/CD
+ci_tmp/
