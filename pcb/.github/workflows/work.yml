@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     container: ghcr.io/inti-cmnb/kicad6_auto:latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Run ERC
         run: |
           kibot -e mouse.kicad_sch -d ci_tmp -c ci/config.kibot.yml -s update_xml,run_erc -i
@@ -23,7 +23,7 @@ jobs:
     container: ghcr.io/inti-cmnb/kicad6_auto:latest
     needs: erc
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Run DRC
         run: |
           kibot -e mouse.kicad_sch -d ci_tmp -c ci/config.kibot.yml -s update_xml,run_drc -i
@@ -39,7 +39,7 @@ jobs:
     container: ghcr.io/inti-cmnb/kicad6_auto:latest
     needs: erc
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Run schematic stuff
         run: |
           kibot -e mouse.kicad_sch -d ci_tmp -c ci/config.kibot.yml -s run_erc,run_drc print_sch print_pcb_top print_pcb_bottom
@@ -50,6 +50,7 @@ jobs:
           path: ci_tmp
       - name: Release to GitHub
         uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
         with:
           files: ci_tmp/*
         env:
@@ -61,17 +62,18 @@ jobs:
     container: ghcr.io/inti-cmnb/kicad6_auto:latest
     needs: drc
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Run PCB stuff
         run: |
           kibot -e mouse.kicad_sch -d ci_tmp -c ci/config.kibot.yml -s all fabrication_files
-      - name: retrieve results
+      - name: Retrieve results
         uses: actions/upload-artifact@v1
         with:
           name: fabrication_output
           path: ci_tmp
       - name: Release to GitHub
         uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
         with:
           files: ci_tmp/*
         env:
@@ -83,7 +85,7 @@ jobs:
     container: ghcr.io/inti-cmnb/kicad6_auto:latest
     needs: fabrication
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Run PCB stuff
         run: |
           kibot -e mouse.kicad_sch -d ci_tmp -c ci/config.kibot.yml -s all pick_and_place bill_of_materials
@@ -94,6 +96,7 @@ jobs:
           path: ci_tmp
       - name: Release to GitHub
         uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
         with:
           files: ci_tmp/*
         env:
