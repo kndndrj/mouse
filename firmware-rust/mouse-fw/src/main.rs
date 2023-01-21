@@ -109,7 +109,6 @@ fn main() -> ! {
 
     // Sensor
     let mut pmw = Pmw3360::new(spi, spi_cs, pmw_reset, delay);
-    pmw.power_up().ok();
     pmw.set_cpi(1200).unwrap_or_default();
 
     // Encoder

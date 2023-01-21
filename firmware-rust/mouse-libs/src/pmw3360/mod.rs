@@ -27,6 +27,8 @@ pub struct Pmw3360<S: Transfer<u8>, CS: OutputPin, RESET: OutputPin, D: DelayUs<
     cs_pin: CS,
     reset_pin: RESET,
     delay: D,
+    // rw_flag is set if any writes or reads were performed
+    rw_flag: bool,
 }
 
 impl<S, CS, RESET, D> Pmw3360<S, CS, RESET, D>
@@ -37,12 +39,17 @@ where
     D: DelayUs<u32>,
 {
     pub fn new(spi: S, cs_pin: CS, reset_pin: RESET, delay: D) -> Self {
-        Self {
+        let mut new = Self {
             spi,
             cs_pin,
             reset_pin,
             delay,
-        }
+            rw_flag: true,
+        };
+
+        new.power_up().unwrap();
+
+        new
     }
 
     pub fn power_up(&mut self) -> Result<(), Infallible> {
@@ -88,8 +95,13 @@ where
 
     pub fn burst_read(&mut self) -> Result<BurstData, Infallible> {
         // TODO: propagate errors
+
         // Write any value to Motion_burst register
-        self.write(reg::MOTION_BURST, 0x00).ok();
+        // if any write occured before
+        if self.rw_flag {
+            self.write(reg::MOTION_BURST, 0x00).ok();
+            self.rw_flag = false;
+        }
 
         // Lower NCS
         self.cs_pin.set_low().ok();
@@ -179,20 +191,24 @@ where
 
     fn write(&mut self, address: u8, data: u8) -> Result<(), Infallible> {
         // TODO: propagate errors
+
         self.cs_pin.set_low().ok();
-        self.delay.delay_us(100);
+        // tNCS-SCLK
+        self.delay.delay_us(1);
 
         // send adress of the register, with MSBit = 1 to indicate it's a write
         self.spi.transfer(&mut [address | 0x80]).ok();
         // send data
         self.spi.transfer(&mut [data]).ok();
-        // tSCLK-NCS for write operation
-        self.delay.delay_us(100 + 35);
+
+        // tSCLK-NCS (write)
+        self.delay.delay_us(35);
         self.cs_pin.set_high().ok();
 
-        // tSWW/tSWR (=120us) minus tSCLK-NCS. Could be
-        // shortened, but is looks like a safe lower bound
-        self.delay.delay_us(100);
+        // tSWW/tSWR minus tSCLK-NCS (write)
+        self.delay.delay_us(145);
+
+        self.rw_flag = true;
 
         Ok(())
     }
@@ -200,7 +216,8 @@ where
     fn read(&mut self, address: u8) -> Result<u8, Infallible> {
         // TODO: propagate errors
         self.cs_pin.set_low().ok();
-        self.delay.delay_us(100);
+        // tNCS-SCLK
+        self.delay.delay_us(1);
 
         // send adress of the register, with MSBit = 0 to indicate it's a read
         self.spi.transfer(&mut [address & 0x7f]).ok();
@@ -213,14 +230,18 @@ where
             ret = *r.first().unwrap();
         }
 
-        self.delay.delay_us(100);
+        // tSCLK-NCS (read)
+        self.delay.delay_us(1);
         self.cs_pin.set_high().ok();
 
-        //  tSRW/tSRR (=20us) minus tSCLK-NCS
-        self.delay.delay_us(19);
+        //  tSRW/tSRR minus tSCLK-NCS
+        self.delay.delay_us(20);
+
+        self.rw_flag = true;
 
         Ok(ret)
     }
+
     fn upload_fw(&mut self) -> Result<(), Infallible> {
         // TODO: propagate errors
         // Write 0 to Rest_En bit of Config2 register to disable Rest mode.
