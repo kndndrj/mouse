@@ -104,7 +104,22 @@ fn main() -> ! {
         &mut rcc,
     );
 
+    // Delay
+    let delay = Delay::new(cp.SYST, &rcc);
+
+    // Sensor
+    let mut pmw = Pmw3360::new(spi, spi_cs, pmw_reset, delay);
+    pmw.power_up().ok();
+    pmw.set_cpi(1200).unwrap_or_default();
+
+    // Encoder
+    let mut enc = Encoder::new(enc_a, enc_b);
+
+    // Debouncer for cpi pin
+    let mut debouncer_cpi = Debouncer::new(8);
+
     // USB
+    // NOTE: keep usb last before loop -> might not enumerate fast enough
     #[cfg(not(feature = "disable_usb"))]
     let usb_bus = UsbBus::new(Peripheral {
         usb: p.USB,
@@ -126,28 +141,26 @@ fn main() -> ! {
     // USB_SERIAL_NUMBER defined in build.rs at compile time
     #[cfg(not(feature = "disable_usb"))]
     let mut usb_dev = UsbDeviceBuilder::new(&usb_bus, UsbVidPid(0xc410, 0x0000))
-        .manufacturer("Mouse Manufacturer")
-        .product("mouse product")
+        .manufacturer("kndndrj")
+        .product("mouse")
         .serial_number(env!("USB_SERIAL_NUMBER"))
         .build();
-
-    // Delay
-    let delay = Delay::new(cp.SYST, &rcc);
-
-    // Sensor
-    let mut pmw = Pmw3360::new(spi, spi_cs, pmw_reset, delay);
-    pmw.power_up().ok();
-    pmw.set_cpi(1200).unwrap_or_default();
-
-    // Encoder
-    let mut enc = Encoder::new(enc_a, enc_b);
-
-    // Debouncer for cpi pin
-    let mut debouncer_cpi = Debouncer::new(8);
 
     let mut report = WheelMouseReport::default();
 
     loop {
+        #[cfg(not(feature = "disable_usb"))]
+        {
+
+            if !usb_dev.poll(&mut [&mut mouse]) {
+                continue;
+            }
+
+            mouse.interface().write_report(&report.pack().unwrap()).ok();
+        }
+
+        report = WheelMouseReport::default();
+
         let motion_data = pmw.burst_read().unwrap_or_default();
 
         if motion_data.motion && motion_data.on_surface {
@@ -194,15 +207,6 @@ fn main() -> ! {
                 cpi = 0;
             }
             pmw.set_cpi(cpi).unwrap_or_default();
-        }
-
-        #[cfg(not(feature = "disable_usb"))]
-        {
-            mouse.interface().write_report(&report.pack().unwrap()).ok();
-
-            if usb_dev.poll(&mut [&mut mouse]) {
-                report = WheelMouseReport::default();
-            }
         }
     }
 }
