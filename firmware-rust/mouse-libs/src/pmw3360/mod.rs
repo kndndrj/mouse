@@ -52,47 +52,6 @@ where
         new
     }
 
-    pub fn power_up(&mut self) -> Result<(), Infallible> {
-        // TODO: propagate errors
-        // sensor reset not active
-        self.reset_pin.set_high().ok();
-
-        // reset the spi bus on the sensor
-        self.cs_pin.set_high().ok();
-        self.delay.delay_us(50);
-        self.cs_pin.set_low().ok();
-        self.delay.delay_us(50);
-
-        // Write to reset register
-        self.write(reg::POWER_UP_RESET, 0x5A).ok();
-        // 100 ms delay
-        self.delay.delay_us(10000);
-
-        // read registers 0x02 to 0x06 (and discard the data)
-        self.read(reg::MOTION).ok();
-        self.read(reg::DELTA_X_L).ok();
-        self.read(reg::DELTA_X_H).ok();
-        self.read(reg::DELTA_Y_L).ok();
-        self.read(reg::DELTA_Y_H).ok();
-
-        // upload the firmware
-        self.upload_fw().ok();
-
-        let is_valid_signature = self.check_signature().unwrap_or_else(|_| -> bool { false });
-
-        // Write 0x00 (rest disable) to Config2 register for wired mouse or 0x20 for
-        // wireless mouse design.
-        self.write(reg::CONFIG_2, 0x00).ok();
-
-        self.delay.delay_us(100);
-
-        if is_valid_signature {
-            return Ok(());
-        };
-
-        Ok(())
-    }
-
     pub fn burst_read(&mut self) -> Result<BurstData, Infallible> {
         // TODO: propagate errors
 
@@ -240,6 +199,47 @@ where
         self.rw_flag = true;
 
         Ok(ret)
+    }
+
+    fn power_up(&mut self) -> Result<(), Infallible> {
+        // TODO: propagate errors
+        // sensor reset not active
+        self.reset_pin.set_high().ok();
+
+        // reset the spi bus on the sensor
+        self.cs_pin.set_high().ok();
+        self.delay.delay_us(50);
+        self.cs_pin.set_low().ok();
+        self.delay.delay_us(50);
+
+        // Write to reset register
+        self.write(reg::POWER_UP_RESET, 0x5A).ok();
+        // 100 ms delay
+        self.delay.delay_us(10000);
+
+        // read registers 0x02 to 0x06 (and discard the data)
+        self.read(reg::MOTION).ok();
+        self.read(reg::DELTA_X_L).ok();
+        self.read(reg::DELTA_X_H).ok();
+        self.read(reg::DELTA_Y_L).ok();
+        self.read(reg::DELTA_Y_H).ok();
+
+        // upload the firmware
+        self.upload_fw().ok();
+
+        let is_valid_signature = self.check_signature().unwrap_or_else(|_| -> bool { false });
+
+        // Write 0x00 (rest disable) to Config2 register for wired mouse or 0x20 for
+        // wireless mouse design.
+        self.write(reg::CONFIG_2, 0x00).ok();
+
+        self.delay.delay_us(100);
+
+        if is_valid_signature {
+            return Ok(());
+        };
+
+        Ok(())
     }
 
     fn upload_fw(&mut self) -> Result<(), Infallible> {
