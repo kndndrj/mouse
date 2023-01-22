@@ -8,6 +8,7 @@
 *-backups
 *-cache.lib
 *.kicad_prl
+*.kicad_prl-bak
 *.sch-bak
 *~
 _autosave-*
@@ -25,6 +26,3 @@ fp-info-cache
 
 # Exported BOM files
 *.xml
-
-# CI/CD
-ci_tmp/

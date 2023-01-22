@@ -2,6 +2,10 @@ name: CI
 
 on: [push, pull_request]
 
+env:
+  CI_TMP_PATH: ci_tmp
+  KIBOT_CMD_PREFIX: "kibot -e pcb/mouse.kicad_sch -b pcb/mouse.kicad_pcb -d ci_tmp -c pcb/ci/config.kibot.yml"
+
 jobs:
   # Electrical rules check
   erc:
@@ -11,12 +15,12 @@ jobs:
       - uses: actions/checkout@v3
       - name: Run ERC
         run: |
-          kibot -e mouse.kicad_sch -d ci_tmp -c ci/config.kibot.yml -s update_xml,run_erc -i
+          ${{ env.KIBOT_CMD_PREFIX }} -s update_xml,run_erc -i
       - name: Retrieve results
         uses: actions/upload-artifact@v1
         with:
           name: erc_output
-          path: ci_tmp
+          path: ${{ env.CI_TMP_PATH }}
   # Design rules check
   drc:
     runs-on: ubuntu-latest
@@ -26,12 +30,12 @@ jobs:
       - uses: actions/checkout@v3
       - name: Run DRC
         run: |
-          kibot -e mouse.kicad_sch -d ci_tmp -c ci/config.kibot.yml -s update_xml,run_drc -i
+          ${{ env.KIBOT_CMD_PREFIX }} -s update_xml,run_drc -i
       - name: Retrieve results
         uses: actions/upload-artifact@v1
         with:
           name: drc_output
-          path: ci_tmp
+          path: ${{ env.CI_TMP_PATH }}
   # Generate pdf schematics
   schematics:
     name: Schematic fabrication files
@@ -42,17 +46,17 @@ jobs:
       - uses: actions/checkout@v3
       - name: Run schematic stuff
         run: |
-          kibot -e mouse.kicad_sch -d ci_tmp -c ci/config.kibot.yml -s run_erc,run_drc print_sch print_pcb_top print_pcb_bottom
+          ${{ env.KIBOT_CMD_PREFIX }} -s run_erc,run_drc print_sch print_pcb_top print_pcb_bottom
       - name: Retrieve results
         uses: actions/upload-artifact@v1
         with:
           name: schematics_output
-          path: ci_tmp
+          path: ${{ env.CI_TMP_PATH }}
       - name: Release to GitHub
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: ci_tmp/*
+          files: ${{ env.CI_TMP_PATH }}/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   # Generate fabrication files
@@ -65,17 +69,17 @@ jobs:
       - uses: actions/checkout@v3
       - name: Run PCB stuff
         run: |
-          kibot -e mouse.kicad_sch -d ci_tmp -c ci/config.kibot.yml -s all fabrication_files
+          ${{ env.KIBOT_CMD_PREFIX }} -s all fabrication_files
       - name: Retrieve results
         uses: actions/upload-artifact@v1
         with:
           name: fabrication_output
-          path: ci_tmp
+          path: ${{ env.CI_TMP_PATH }}
       - name: Release to GitHub
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: ci_tmp/*
+          files: ${{ env.CI_TMP_PATH }}/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   # Generate BOM and "Pick and Place" files
@@ -88,16 +92,16 @@ jobs:
       - uses: actions/checkout@v3
       - name: Run PCB stuff
         run: |
-          kibot -e mouse.kicad_sch -d ci_tmp -c ci/config.kibot.yml -s all pick_and_place bill_of_materials
+          ${{ env.KIBOT_CMD_PREFIX }} -s all pick_and_place bill_of_materials
       - name: Retrieve results
         uses: actions/upload-artifact@v1
         with:
           name: assembly_output
-          path: ci_tmp
+          path: ${{ env.CI_TMP_PATH }}
       - name: Release to GitHub
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: ci_tmp/*
+          files: ${{ env.CI_TMP_PATH }}/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
