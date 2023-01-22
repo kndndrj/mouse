@@ -35,4 +35,5 @@ The new version of firmware is split into 2 parts:
   from the forementioned library.
 
 [more - C](firmware-c/)
+
 [more - Rust](firmware-rust/)
