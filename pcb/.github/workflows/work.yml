@@ -1,0 +1,103 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  # Electrical rules check
+  erc:
+    runs-on: ubuntu-latest
+    container: ghcr.io/inti-cmnb/kicad6_auto:latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run ERC
+        run: |
+          kibot -e mouse.kicad_sch -d ci_tmp -c ci/config.kibot.yml -s update_xml,run_erc -i
+      - name: Retrieve results
+        uses: actions/upload-artifact@v1
+        with:
+          name: erc_output
+          path: ci_tmp
+  # Design rules check
+  drc:
+    runs-on: ubuntu-latest
+    container: ghcr.io/inti-cmnb/kicad6_auto:latest
+    needs: erc
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run DRC
+        run: |
+          kibot -e mouse.kicad_sch -d ci_tmp -c ci/config.kibot.yml -s update_xml,run_drc -i
+      - name: Retrieve results
+        uses: actions/upload-artifact@v1
+        with:
+          name: drc_output
+          path: ci_tmp
+  # Generate pdf schematics
+  schematics:
+    name: Schematic fabrication files
+    runs-on: ubuntu-latest
+    container: ghcr.io/inti-cmnb/kicad6_auto:latest
+    needs: erc
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run schematic stuff
+        run: |
+          kibot -e mouse.kicad_sch -d ci_tmp -c ci/config.kibot.yml -s run_erc,run_drc print_sch print_pcb_top print_pcb_bottom
+      - name: Retrieve results
+        uses: actions/upload-artifact@v1
+        with:
+          name: schematics_output
+          path: ci_tmp
+      - name: Release to GitHub
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: ci_tmp/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  # Generate fabrication files
+  fabrication:
+    name: PCB fabrication files
+    runs-on: ubuntu-latest
+    container: ghcr.io/inti-cmnb/kicad6_auto:latest
+    needs: drc
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run PCB stuff
+        run: |
+          kibot -e mouse.kicad_sch -d ci_tmp -c ci/config.kibot.yml -s all fabrication_files
+      - name: Retrieve results
+        uses: actions/upload-artifact@v1
+        with:
+          name: fabrication_output
+          path: ci_tmp
+      - name: Release to GitHub
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: ci_tmp/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  # Generate BOM and "Pick and Place" files
+  assembly:
+    name: PCB assembly files
+    runs-on: ubuntu-latest
+    container: ghcr.io/inti-cmnb/kicad6_auto:latest
+    needs: fabrication
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run PCB stuff
+        run: |
+          kibot -e mouse.kicad_sch -d ci_tmp -c ci/config.kibot.yml -s all pick_and_place bill_of_materials
+      - name: Retrieve results
+        uses: actions/upload-artifact@v1
+        with:
+          name: assembly_output
+          path: ci_tmp
+      - name: Release to GitHub
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: ci_tmp/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
