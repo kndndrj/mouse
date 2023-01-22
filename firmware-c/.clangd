@@ -1,0 +1,2 @@
+CompileFlags:                                     # Tweak the parse settings
+  Add: [--sysroot=/usr/arm-none-eabi]             # treat all files as C++, enable more warnings
