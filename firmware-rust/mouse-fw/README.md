@@ -1,4 +1,4 @@
-# Mouse Firmware
+# Mouse Firmware in Rust - Implementation
 
 Firmware implementation for mouse-pcb.
 

@@ -4,12 +4,14 @@ Rust firmware for computer mice.
 
 This repo is split into two parts:
 
-1. `mouse-libs`
+- `mouse-libs`
 
-   Drivers for mouse components using embedded-hal interfaces.
-   Read more [here](mouse-libs/README.md).
+  Drivers for mouse components using embedded-hal interfaces.
 
-2. `mouse-fw`
+  [more](mouse-libs/README.md).
 
-   Specific firmware implementation using the forementioned libraries.
-   Read more [here](mouse-fw/README.md).
+- `mouse-fw`
+
+  Specific firmware implementation using the forementioned libraries.
+
+  [more](mouse-fw/README.md).

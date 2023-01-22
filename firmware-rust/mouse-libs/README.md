@@ -1,4 +1,4 @@
-# Mouse Firmware Library
+# Mouse Firmware in Rust - Library
 
 Building blocks for writing your own firmware. It uses "interfaces"
 defined by embedded-hal crate to abstract away the hardware. If you want
