@@ -13,6 +13,7 @@ panic-halt = "0.2.0"
 usb-device = "0.2.4"
 embedded-time = "0.12"
 usbd-human-interface-device = "0.3"
+fugit = "0.3"
 packed_struct = { version = "0.10", default-features = false }
 mouse-libs = { path = "../mouse-libs" }
 

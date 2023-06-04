@@ -12,7 +12,7 @@ use usbd_human_interface_device::device::mouse::WheelMouseReport;
 
 #[cfg(not(feature = "disable_usb"))]
 use {
-    embedded_time::duration::Milliseconds,
+    fugit::ExtU32,
     stm32f0xx_hal::usb::{Peripheral, UsbBus},
     usb_device::prelude::*,
     usbd_human_interface_device::{
@@ -131,7 +131,7 @@ fn main() -> ! {
             RawInterfaceBuilder::new(WHEEL_MOUSE_REPORT_DESCRIPTOR)
                 .boot_device(InterfaceProtocol::Mouse)
                 .description("Wheel Mouse")
-                .in_endpoint(UsbPacketSize::Bytes8, Milliseconds(1))
+                .in_endpoint(UsbPacketSize::Bytes8, 1.millis())
                 .unwrap()
                 .without_out_endpoint()
                 .build(),
