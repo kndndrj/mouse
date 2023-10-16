@@ -2,6 +2,13 @@
 
 Computer mouse from scratch.
 
+This repository serves as an appendix to my master thesis.
+
+New features and bugfixes won't be added to this repository.
+I plan on separating different parts of the repository into
+a bigger project sometime in the future. If you come across
+this repository before I do that, feel free to open an issue here.
+
 ![render](assets/render.png)
 
 ## Overview
